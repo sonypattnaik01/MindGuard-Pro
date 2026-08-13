@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+python-dotenv
+google-genai
+ultralytics
+opencv-python
+numpy
+python-multipart
+torch
+torchvision
+gunicorn
