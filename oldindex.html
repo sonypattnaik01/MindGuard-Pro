@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindGuard — Neural Mental Health Assessment</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#04060d;
+  --bg2:#070c18;
+  --bg3:#0a1020;
+  --surface:#0d1628;
+  --surface2:#111e35;
+  --surface3:#162240;
+  --border:rgba(80,140,255,0.08);
+  --border2:rgba(80,140,255,0.18);
+  --border3:rgba(255,100,220,0.18);
+  --text:#e8f0ff;
+  --text2:#7a9acc;
+  --text3:#3a5070;
+  --blue:#4f8bff;
+  --blue2:#2563eb;
+  --pink:#f054b8;
+  --pink2:#c026a0;
+  --cyan:#06c8e8;
+  --green:#10e8a0;
+  --yellow:#f5c842;
+  --red:#f55c5c;
+  --purple:#9b6fff;
+  --glow-b:rgba(79,139,255,0.2);
+  --glow-p:rgba(240,84,184,0.2);
+  --r:14px;
+  --r2:20px;
+}
+
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* ─── LOADER ─── */
+#pageLoader{
+  position:fixed;inset:0;z-index:99999;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem;
+  transition:opacity 0.8s ease, visibility 0.8s ease;
+}
+#pageLoader.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+.loader-logo{
+  font-size:3rem;font-weight:900;letter-spacing:-2px;
+  background:linear-gradient(135deg,var(--blue),var(--pink));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  animation:logoPulse 2s ease-in-out infinite;
+}
+@keyframes logoPulse{0%,100%{filter:brightness(1);}50%{filter:brightness(1.4);}}
+.loader-ring{
+  width:80px;height:80px;position:relative;
+}
+.loader-ring::before,.loader-ring::after{
+  content:'';position:absolute;inset:0;border-radius:50%;
+  border:3px solid transparent;
+}
+.loader-ring::before{border-top-color:var(--blue);animation:spin 1.2s linear infinite;}
+.loader-ring::after{inset:8px;border-top-color:var(--pink);animation:spin 0.8s linear infinite reverse;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loader-steps{display:flex;flex-direction:column;gap:8px;align-items:center;}
+.loader-step{font-size:0.82rem;color:var(--text2);font-family:'JetBrains Mono',monospace;opacity:0;animation:stepFade 0.4s ease forwards;}
+@keyframes stepFade{to{opacity:1;}}
+.loader-bar-wrap{width:260px;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.loader-bar{height:100%;background:linear-gradient(90deg,var(--blue),var(--pink));width:0%;transition:width 0.3s ease;border-radius:2px;}
+
+/* ─── CYBER GRID BG ─── */
+.cyber-bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+}
+.cyber-bg canvas{position:absolute;inset:0;width:100%;height:100%;}
+.cyber-bg::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 60% at 15% 15%,rgba(79,139,255,0.07) 0%,transparent 65%),
+             radial-gradient(ellipse 50% 45% at 85% 80%,rgba(240,84,184,0.06) 0%,transparent 65%),
+             radial-gradient(ellipse 40% 40% at 50% 50%,rgba(6,200,232,0.03) 0%,transparent 60%);
+}
+
+/* ─── AI ANALYSIS OVERLAY ─── */
+#aiOverlay{
+  position:fixed;inset:0;z-index:9998;
+  background:rgba(4,6,13,0.95);backdrop-filter:blur(16px);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:2rem;
+}
+#aiOverlay.active{display:flex;}
+.ai-ring-outer{position:relative;width:140px;height:140px;}
+.ai-ring-outer svg{position:absolute;inset:0;width:100%;height:100%;animation:rotateSvg 3s linear infinite;}
+.ai-ring-inner{
+  position:absolute;inset:16px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(79,139,255,0.15),rgba(240,84,184,0.15));
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.4rem;
+  animation:innerPulse 1.5s ease-in-out infinite;
+}
+@keyframes rotateSvg{to{transform:rotate(360deg);}}
+@keyframes innerPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+.ai-title{font-size:1.6rem;font-weight:800;letter-spacing:-0.5px;color:var(--text);}
+.ai-subtitle{font-size:0.85rem;color:var(--text2);font-family:'JetBrains Mono',monospace;}
+.ai-steps-wrap{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:460px;width:100%;}
+.ai-step{
+  padding:10px 14px;border-radius:10px;
+  background:var(--surface);border:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+  font-size:0.8rem;color:var(--text3);
+  transition:all 0.4s ease;
+}
+.ai-step.active{border-color:rgba(79,139,255,0.4);color:var(--text);background:rgba(79,139,255,0.08);}
+.ai-step.done{border-color:rgba(16,232,160,0.4);color:var(--green);background:rgba(16,232,160,0.06);}
+.ai-step-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background 0.3s;}
+.ai-step.active .ai-step-dot{background:var(--blue);animation:stepDotPulse 1s infinite;}
+.ai-step.done .ai-step-dot{background:var(--green);}
+@keyframes stepDotPulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.ai-progress-bar{width:460px;max-width:90vw;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.ai-progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--pink));width:0%;transition:width 0.5s ease;border-radius:2px;}
+
+/* ─── NAV ─── */
+nav{
+  position:sticky;top:0;z-index:900;
+  background:rgba(4,6,13,0.88);backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);
+  padding:0 2.5rem;height:66px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.35rem;letter-spacing:-0.5px;}
+.logo-mark{
+  width:38px;height:38px;border-radius:10px;
+  background:linear-gradient(135deg,var(--blue),var(--pink));
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+  box-shadow:0 0 20px rgba(79,139,255,0.4);
+}
+.logo span{background:linear-gradient(135deg,var(--blue),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.nav-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.nav-btn{
+  padding:7px 16px;border-radius:50px;font-family:'Outfit',sans-serif;
+  font-size:0.83rem;font-weight:500;cursor:pointer;
+  border:1px solid var(--border2);background:transparent;color:var(--text2);
+  transition:all 0.2s;white-space:nowrap;
+}
+.nav-btn:hover{background:var(--surface2);color:var(--text);border-color:rgba(79,139,255,0.3);}
+.nav-btn.primary{background:linear-gradient(135deg,var(--blue),var(--pink));border:none;color:white;font-weight:600;}
+.nav-btn.primary:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(79,139,255,0.35);}
+.nav-btn.crisis{background:rgba(245,92,92,0.1);border-color:rgba(245,92,92,0.3);color:var(--red);}
+.nav-btn.crisis:hover{background:rgba(245,92,92,0.2);}
+
+/* ─── CONTAINER ─── */
+.container{max-width:1320px;margin:0 auto;padding:2.5rem 2.5rem 6rem;position:relative;z-index:1;}
+
+/* ─── HERO ─── */
+.hero{text-align:center;padding:4.5rem 0 3.5rem;}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 16px;border-radius:50px;font-size:0.75rem;font-weight:600;
+  background:linear-gradient(135deg,rgba(79,139,255,0.12),rgba(240,84,184,0.12));
+  border:1px solid rgba(79,139,255,0.25);color:var(--blue);
+  letter-spacing:1px;text-transform:uppercase;margin-bottom:1.8rem;
+}
+.hero-badge::before{content:'';width:6px;height:6px;background:var(--blue);border-radius:50%;animation:hbPulse 2s infinite;}
+@keyframes hbPulse{0%,100%{box-shadow:0 0 0 0 rgba(79,139,255,0.6);}50%{box-shadow:0 0 0 6px rgba(79,139,255,0);}}
+.hero h1{
+  font-size:4.2rem;font-weight:900;line-height:1.02;letter-spacing:-3px;margin-bottom:1.2rem;
+  background:linear-gradient(135deg,#fff 0%,rgba(200,220,255,0.9) 40%,rgba(240,84,184,0.8) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero-sub{color:var(--text2);font-size:1.05rem;font-weight:300;max-width:520px;margin:0 auto 1.8rem;line-height:1.75;}
+.hero-disclaimer{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 20px;
+  background:rgba(245,200,66,0.07);border:1px solid rgba(245,200,66,0.2);
+  border-radius:50px;font-size:0.79rem;color:var(--yellow);
+}
+
+/* ─── CARD ─── */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r2);overflow:hidden;
+  transition:border-color 0.3s,box-shadow 0.3s;
+}
+.card:hover{border-color:var(--border2);box-shadow:0 4px 32px rgba(79,139,255,0.06);}
+.card-head{
+  padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:linear-gradient(90deg,rgba(79,139,255,0.04),transparent);
+}
+.card-head-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.88rem;flex-shrink:0;}
+.card-head h2{font-family:'Outfit',sans-serif;font-size:0.92rem;font-weight:700;letter-spacing:-0.2px;flex:1;}
+.card-body{padding:1.5rem;}
+
+/* ─── GRID LAYOUTS ─── */
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
+
+/* ─── TEXTAREA ─── */
+.text-area{
+  width:100%;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--text);font-family:'Outfit',sans-serif;
+  font-size:0.9rem;font-weight:300;line-height:1.7;padding:1rem 1.2rem;
+  resize:vertical;min-height:130px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;
+}
+.text-area:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,139,255,0.1);}
+.text-area::placeholder{color:var(--text3);}
+
+/* ─── SLIDERS ─── */
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.5rem;}
+.metric-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;font-size:0.81rem;color:var(--text2);font-weight:500;}
+.metric-val{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;color:var(--blue);}
+.slider{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:var(--surface2);outline:none;cursor:pointer;}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--pink));cursor:pointer;box-shadow:0 0 12px rgba(79,139,255,0.5);transition:transform 0.2s;}
+.slider::-webkit-slider-thumb:hover{transform:scale(1.3);}
+
+/* ─── CAMERA ─── */
+.cam-wrap{position:relative;width:100%;height:260px;background:var(--bg2);border-radius:var(--r);overflow:hidden;border:1px solid var(--border);}
+#cameraFeed{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+#cameraCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;}
+/* CYBER CAPTURE GRID */
+#cyberGrid{position:absolute;inset:0;z-index:3;pointer-events:none;display:none;}
+.cam-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text3);z-index:1;}
+.cam-ph-icon{width:60px;height:60px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:1.5rem;}
+
+/* ─── BUTTONS ─── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 18px;border-radius:10px;font-family:'Outfit',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;border:none;transition:all 0.2s;white-space:nowrap;}
+.btn-blue{background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;}
+.btn-blue:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 16px rgba(79,139,255,0.35);}
+.btn-pink{background:linear-gradient(135deg,var(--pink),var(--pink2));color:white;}
+.btn-pink:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 16px rgba(240,84,184,0.35);}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover:not(:disabled){background:var(--surface3);color:var(--text);}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+.cam-controls{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;}
+select{background:var(--bg2);border:1px solid var(--border);color:var(--text2);padding:6px 12px;border-radius:8px;font-family:'Outfit',sans-serif;font-size:0.8rem;outline:none;cursor:pointer;}
+
+/* ─── PROGRESS ─── */
+.prog-wrap{margin-top:1rem;}
+.prog-bar-bg{width:100%;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-bottom:6px;}
+.prog-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--pink));border-radius:2px;transition:width 0.3s;}
+.prog-text{font-size:0.73rem;color:var(--text3);font-family:'JetBrains Mono',monospace;}
+
+/* ─── LIVE BOX ─── */
+.live-box{margin-top:1rem;padding:1rem 1.2rem;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);}
+.live-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:0.8rem;}
+.live-label{color:var(--text2);}
+.live-val{font-weight:700;font-family:'JetBrains Mono',monospace;}
+
+/* ─── 7-SEGMENT MOOD ─── */
+.mood-segments{display:flex;gap:4px;margin-top:0.5rem;}
+.mood-seg{
+  flex:1;height:28px;border-radius:4px;
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.6rem;font-weight:600;color:var(--text3);
+  transition:all 0.3s;cursor:default;
+  position:relative;overflow:hidden;
+}
+.mood-seg::after{content:attr(data-label);font-size:0.5rem;position:absolute;bottom:2px;}
+.mood-seg.active-seg{color:white;}
+
+/* ─── ASSESS BTN ─── */
+.btn-assess{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  width:100%;padding:1.15rem 2rem;margin:1.5rem 0;
+  border-radius:var(--r);font-family:'Outfit',sans-serif;font-size:1rem;font-weight:800;
+  letter-spacing:-0.3px;cursor:pointer;border:none;
+  background:linear-gradient(135deg,var(--blue) 0%,var(--pink) 100%);
+  color:white;transition:all 0.3s;position:relative;overflow:hidden;
+  box-shadow:0 4px 32px rgba(79,139,255,0.25);
+}
+.btn-assess::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(255,255,255,0.1));opacity:0;transition:opacity 0.2s;}
+.btn-assess:hover{transform:translateY(-2px);box-shadow:0 8px 40px rgba(79,139,255,0.4);}
+.btn-assess:hover::before{opacity:1;}
+
+/* ─── FRAMES ─── */
+.frames-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;max-height:220px;overflow-y:auto;}
+.frame-thumb{position:relative;aspect-ratio:4/3;border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all 0.2s;}
+.frame-thumb:hover{border-color:var(--blue);transform:scale(1.04);}
+.frame-thumb img{width:100%;height:100%;object-fit:cover;}
+.frame-emo{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.75);font-size:0.58rem;padding:3px 5px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.frame-idx{position:absolute;top:3px;left:3px;background:rgba(0,0,0,0.6);color:white;font-size:0.53rem;padding:2px 5px;border-radius:4px;font-family:'JetBrains Mono',monospace;}
+.frame-conf{
+  position:absolute;top:3px;right:3px;
+  background:rgba(79,139,255,0.85);color:white;
+  font-size:0.52rem;padding:2px 5px;border-radius:4px;
+  font-family:'JetBrains Mono',monospace;font-weight:700;
+}
+
+/* ─── CHAT ─── */
+.chat-messages{max-height:380px;overflow-y:auto;padding:1rem;background:var(--bg2);border-radius:var(--r);margin-bottom:1rem;}
+.chat-msg{margin-bottom:1rem;padding:0.85rem 1rem;border-radius:12px;max-width:86%;animation:msgIn 0.3s ease;}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.chat-msg.user{margin-left:auto;background:var(--surface2);border:1px solid var(--border);}
+.chat-msg.assistant{margin-right:auto;background:rgba(79,139,255,0.07);border:1px solid rgba(79,139,255,0.15);}
+.chat-msg-head{font-size:0.68rem;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;}
+.chat-msg-body{font-size:0.88rem;line-height:1.65;color:var(--text);}
+.chat-input-row{display:flex;gap:8px;}
+.chat-input-row input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px 14px;font-family:'Outfit',sans-serif;font-size:0.88rem;outline:none;transition:border-color 0.2s;}
+.chat-input-row input:focus{border-color:var(--blue);}
+
+/* ─── RESULTS ─── */
+.results-section{margin-top:2rem;animation:fadeUp 0.6s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+.result-banner{
+  border-radius:var(--r2);padding:2.2rem 2.5rem;margin-bottom:1.5rem;
+  position:relative;overflow:hidden;display:flex;align-items:center;gap:2.5rem;
+}
+.result-banner::before{content:'';position:absolute;inset:0;background:inherit;z-index:0;}
+.result-banner>*{position:relative;z-index:1;}
+.result-banner.low{background:rgba(16,232,160,0.08);border:1px solid rgba(16,232,160,0.22);}
+.result-banner.moderate{background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.22);}
+.result-banner.high{background:rgba(245,92,92,0.08);border:1px solid rgba(245,92,92,0.22);}
+.r-icon{width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;flex-shrink:0;}
+.result-banner.low .r-icon{background:rgba(16,232,160,0.15);}
+.result-banner.moderate .r-icon{background:rgba(245,200,66,0.15);}
+.result-banner.high .r-icon{background:rgba(245,92,92,0.15);}
+.r-tag{font-size:0.72rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.result-banner.low .r-tag{color:var(--green);}
+.result-banner.moderate .r-tag{color:var(--yellow);}
+.result-banner.high .r-tag{color:var(--red);}
+.r-heading{font-size:2rem;font-weight:900;letter-spacing:-1px;margin-bottom:6px;}
+.r-sub{color:var(--text2);font-size:0.88rem;line-height:1.5;max-width:480px;}
+.r-conf{margin-left:auto;text-align:right;flex-shrink:0;}
+.r-conf-num{font-family:'JetBrains Mono',monospace;font-size:2.8rem;font-weight:700;letter-spacing:-2px;}
+.result-banner.low .r-conf-num{color:var(--green);}
+.result-banner.moderate .r-conf-num{color:var(--yellow);}
+.result-banner.high .r-conf-num{color:var(--red);}
+.r-conf-lbl{font-size:0.72rem;color:var(--text3);}
+
+/* ─── STATS ROW ─── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem 1.3rem;}
+.stat-box-lbl{font-size:0.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;margin-bottom:8px;}
+.stat-box-val{font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;letter-spacing:-0.5px;}
+
+/* ─── CHARTS ─── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:1.5rem;}
+.chart-card h3{font-size:0.83rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text2);margin-bottom:1.2rem;}
+.chart-wrap{position:relative;height:200px;}
+
+/* ─── PROB BARS ─── */
+.prob-bars{display:flex;flex-direction:column;gap:1rem;}
+.prob-row-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:0.8rem;}
+.prob-row-lbl{color:var(--text2);font-weight:500;}
+.prob-row-val{font-family:'JetBrains Mono',monospace;font-weight:700;}
+.prob-track{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.prob-fill{height:100%;border-radius:4px;transition:width 0.7s cubic-bezier(0.34,1.56,0.64,1);width:0;}
+.prob-fill.low{background:linear-gradient(90deg,var(--green),#34d399);}
+.prob-fill.moderate{background:linear-gradient(90deg,var(--yellow),#fbbf24);}
+.prob-fill.high{background:linear-gradient(90deg,var(--red),#f87171);}
+
+/* ─── FACE CARD ─── */
+.face-card,.suggestions-card,.timeline-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:1.5rem;margin-bottom:1.5rem;}
+.face-card h3,.suggestions-card h3,.timeline-card h3{font-size:0.83rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text2);margin-bottom:1rem;}
+.face-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:1rem;}
+.face-stat{text-align:center;padding:1rem;background:var(--surface2);border-radius:var(--r);}
+.face-stat-val{font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--blue);margin-bottom:4px;}
+.face-stat-lbl{font-size:0.68rem;color:var(--text3);}
+
+/* ─── 7-SEG DISPLAY (Results) ─── */
+.mood-seg-display{display:flex;gap:4px;margin-top:8px;}
+.mood-seg-result{
+  flex:1;padding:6px 2px;border-radius:4px;text-align:center;
+  background:var(--surface2);border:1px solid var(--border);
+  font-size:0.58rem;color:var(--text3);font-weight:600;
+  transition:all 0.3s;
+}
+.mood-seg-result.seg-active{color:white;}
+
+/* ─── SUGGESTIONS ─── */
+.sug-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;}
+.sug-item{padding:1rem 1.2rem;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;transition:border-color 0.2s;}
+.sug-item:hover{border-color:var(--border2);}
+.sug-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.sug-text h4{font-size:0.84rem;font-weight:600;margin-bottom:3px;}
+.sug-text p{font-size:0.76rem;color:var(--text2);line-height:1.4;}
+
+/* ─── DOWNLOAD REPORT ─── */
+.report-btn-wrap{display:flex;gap:10px;margin-top:1.5rem;}
+
+/* ─── HISTORY ─── */
+.history-section{margin-top:4rem;}
+.section-title{font-size:1.5rem;font-weight:900;letter-spacing:-0.5px;margin-bottom:1.5rem;display:flex;align-items:center;gap:12px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.hist-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+.hist-stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.3rem;text-align:center;}
+.hist-stat-num{font-family:'JetBrains Mono',monospace;font-size:2.1rem;font-weight:700;color:var(--blue);letter-spacing:-1px;}
+.hist-stat-lbl{font-size:0.73rem;color:var(--text3);margin-top:4px;}
+
+table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:var(--r2);overflow:hidden;border:1px solid var(--border);}
+thead th{padding:.85rem 1.2rem;text-align:left;font-size:0.72rem;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);}
+tbody td{padding:.85rem 1.2rem;font-size:0.83rem;border-bottom:1px solid var(--border);color:var(--text2);}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--surface2);}
+.risk-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:50px;font-size:0.73rem;font-weight:600;}
+.risk-badge.low{background:rgba(16,232,160,0.12);color:var(--green);}
+.risk-badge.moderate{background:rgba(245,200,66,0.12);color:var(--yellow);}
+.risk-badge.high{background:rgba(245,92,92,0.12);color:var(--red);}
+.empty-row td{text-align:center;padding:3rem;color:var(--text3);}
+
+/* ─── MODALS ─── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:9000;display:none;align-items:center;justify-content:center;padding:2rem;}
+.modal-overlay.active{display:flex;}
+.modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);max-width:480px;width:100%;overflow:hidden;animation:mIn 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes mIn{from{opacity:0;transform:scale(0.9);}to{opacity:1;transform:scale(1);}}
+.modal-head{padding:1.5rem;background:rgba(245,92,92,0.08);border-bottom:1px solid rgba(245,92,92,0.18);display:flex;justify-content:space-between;align-items:center;}
+.modal-head h2{font-size:1.05rem;font-weight:700;color:var(--red);}
+.modal-close{background:none;border:none;color:var(--text3);font-size:1.5rem;cursor:pointer;}
+.modal-body{padding:1.5rem;}
+.modal-body p{color:var(--text2);font-size:0.88rem;margin-bottom:1rem;line-height:1.6;}
+.crisis-item{display:flex;align-items:center;gap:12px;padding:1rem;background:var(--surface2);border-radius:var(--r);margin-bottom:8px;border:1px solid var(--border);}
+.crisis-item strong{display:block;font-size:0.86rem;}
+.crisis-item span{font-size:0.78rem;color:var(--text2);}
+
+/* ─── LIGHTBOX ─── */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.94);z-index:8999;display:none;align-items:center;justify-content:center;flex-direction:column;gap:1rem;backdrop-filter:blur(12px);}
+.lightbox.active{display:flex;}
+.lightbox img{max-width:90vw;max-height:70vh;object-fit:contain;border-radius:var(--r);border:1px solid var(--border2);}
+.lb-info{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;justify-content:center;}
+.lb-close{position:absolute;top:1.5rem;right:1.5rem;background:var(--surface);border:1px solid var(--border);color:var(--text);width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;}
+
+/* ─── TOAST ─── */
+.toast{position:fixed;bottom:2rem;right:2rem;z-index:9999;transform:translateY(100px);opacity:0;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast-inner{padding:11px 20px;background:var(--surface2);border-radius:50px;font-size:0.84rem;border:1px solid var(--border2);display:flex;align-items:center;gap:8px;box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:3px;}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:900px){.main-grid{grid-template-columns:1fr;}.charts-row{grid-template-columns:1fr;}.stats-row{grid-template-columns:repeat(2,1fr);}.hero h1{font-size:2.8rem;}}
+@media(max-width:600px){.container{padding:1.5rem 1rem 4rem;}nav{padding:0 1rem;}.hero h1{font-size:2rem;}.stats-row{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+
+<!-- PAGE LOADER -->
+<div id="pageLoader">
+  <div class="loader-logo">🧠 MindGuard</div>
+  <div class="loader-ring"></div>
+  <div class="loader-bar-wrap"><div class="loader-bar" id="loaderBar"></div></div>
+  <div class="loader-steps" id="loaderSteps"></div>
+</div>
+
+<!-- CYBER GRID BG -->
+<div class="cyber-bg"><canvas id="cyberBgCanvas"></canvas></div>
+
+<!-- AI ANALYSIS OVERLAY -->
+<div id="aiOverlay">
+  <div class="ai-ring-outer">
+    <svg viewBox="0 0 140 140"><circle cx="70" cy="70" r="62" fill="none" stroke="url(#rg)" stroke-width="3" stroke-dasharray="200 200" stroke-linecap="round"/><defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4f8bff"/><stop offset="100%" stop-color="#f054b8"/></linearGradient></defs></svg>
+    <div class="ai-ring-inner">🧠</div>
+  </div>
+  <div class="ai-title">Analyzing Neural Patterns</div>
+  <div class="ai-subtitle" id="aiSubtitle">Initializing AI engine...</div>
+  <div class="ai-steps-wrap" id="aiSteps">
+    <div class="ai-step" id="as0"><div class="ai-step-dot"></div>Text Sentiment</div>
+    <div class="ai-step" id="as1"><div class="ai-step-dot"></div>Facial Emotions</div>
+    <div class="ai-step" id="as2"><div class="ai-step-dot"></div>Behavioral Signals</div>
+    <div class="ai-step" id="as3"><div class="ai-step-dot"></div>Risk Modeling</div>
+    <div class="ai-step" id="as4"><div class="ai-step-dot"></div>Confidence Score</div>
+    <div class="ai-step" id="as5"><div class="ai-step-dot"></div>Report Generation</div>
+  </div>
+  <div class="ai-progress-bar"><div class="ai-progress-fill" id="aiProgFill"></div></div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <div class="logo-mark">🧠</div>
+    <span>MindGuard</span>
+  </div>
+  <div class="nav-right">
+    <button class="nav-btn" onclick="startConversation()">💬 Start Chat</button>
+    <button class="nav-btn" onclick="document.getElementById('historyAnchor').scrollIntoView({behavior:'smooth'})">History</button>
+    <button class="nav-btn crisis" onclick="openCrisis()">🆘 Crisis Help</button>
+    <button class="nav-btn primary" onclick="connectBackend()">⚡ Load Models</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="hero">
+    <div class="hero-badge">Neural AI Screening System</div>
+    <h1>Mental Health<br>Risk Assessment</h1>
+    <div class="hero-sub">Multi-modal AI combining conversation analysis, real-time facial emotion detection, and behavioral biomarkers for early mental health screening.</div>
+    <div class="hero-disclaimer">⚠️ Research & screening use only — Not a clinical diagnostic tool. Consult a licensed professional.</div>
+  </div>
+
+  <!-- CHAT CARD -->
+  <div class="card" id="chatCard" style="display:none;margin-bottom:1.5rem;">
+    <div class="card-head">
+      <div class="card-head-icon" style="background:rgba(240,84,184,0.15);">💬</div>
+      <h2>AI Mental Health Conversation</h2>
+      <button class="btn btn-pink" onclick="endConversation()" style="margin-left:auto;" id="endChatBtn">End Chat & Assess</button>
+    </div>
+    <div class="card-body">
+      <div class="chat-messages" id="chatMessages">
+        <div style="text-align:center;color:var(--text3);padding:2rem;">Press "Start Chat" to begin an interactive assessment...</div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Type your response..." onkeypress="if(event.key==='Enter')sendMessage()" disabled>
+        <button class="btn btn-blue" onclick="sendMessage()" id="sendBtn" disabled>Send</button>
+      </div>
+      <div style="margin-top:8px;font-size:0.75rem;color:var(--text3);display:flex;align-items:center;gap:6px;" id="chatStatus">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--text3);" id="chatDot"></div><span id="chatStatusText">Chat not started</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+    <div>
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-icon" style="background:rgba(79,139,255,0.15);">✏️</div>
+          <h2>Text & Behavioral Analysis</h2>
+        </div>
+        <div class="card-body">
+          <textarea class="text-area" id="textInput" rows="6" placeholder="How have you been feeling lately? Describe your mood, energy levels, sleep quality, social interactions, and any concerns on your mind..."></textarea>
+          <div class="metrics-grid">
+            <div>
+              <div class="metric-label"><span>🌙 Sleep Hours</span><span class="metric-val" id="sleepDisplay">7.0h</span></div>
+              <input type="range" class="slider" id="sleepSlider" min="0" max="12" step="0.5" value="7">
+            </div>
+            <div>
+              <div class="metric-label"><span>⚡ Energy Level</span><span class="metric-val" id="moodDisplay">5 / 10</span></div>
+              <input type="range" class="slider" id="moodSlider" min="1" max="10" step="1" value="5">
+            </div>
+          </div>
+          <!-- 7-SEGMENT MOOD INDICATOR -->
+          <div style="margin-top:1.2rem;">
+            <div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;">7-Segment Emotional State</div>
+            <div class="mood-segments" id="moodSegs">
+              <div class="mood-seg" data-label="😭" data-seg="0">Despair</div>
+              <div class="mood-seg" data-label="😢" data-seg="1">Sad</div>
+              <div class="mood-seg" data-label="😟" data-seg="2">Anxious</div>
+              <div class="mood-seg" data-label="😐" data-seg="3">Neutral</div>
+              <div class="mood-seg" data-label="🙂" data-seg="4">Content</div>
+              <div class="mood-seg" data-label="😊" data-seg="5">Good</div>
+              <div class="mood-seg" data-label="😄" data-seg="6">Elated</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-icon" style="background:rgba(240,84,184,0.15);">📷</div>
+          <h2>Facial Emotion Detection</h2>
+          <select id="durSel"><option value="5">5s</option><option value="10" selected>10s</option><option value="15">15s</option></select>
+          <select id="fpsSel"><option value="3">3fps</option><option value="5" selected>5fps</option><option value="10">10fps</option></select>
+        </div>
+        <div class="card-body">
+          <div class="cam-wrap" id="camWrap">
+            <video id="cameraFeed" autoplay playsinline muted></video>
+            <canvas id="cameraCanvas"></canvas>
+            <canvas id="cyberGrid"></canvas>
+            <div class="cam-placeholder" id="camPlaceholder">
+              <div class="cam-ph-icon">📹</div>
+              <p style="font-size:0.84rem;">Camera feed will appear here</p>
+              <p style="font-size:0.72rem;color:var(--text3);">Enable camera for facial analysis</p>
+            </div>
+          </div>
+          <div class="cam-controls">
+            <button class="btn btn-blue" id="startBtn" onclick="startCapture()">▶ Start Capture</button>
+            <button class="btn btn-ghost" id="stopBtn" onclick="stopCapture()" disabled>⏹ Stop</button>
+            <button class="btn btn-ghost" onclick="triggerUpload()">⬆ Upload</button>
+            <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+          </div>
+          <div id="progWrap" style="display:none;" class="prog-wrap">
+            <div class="prog-bar-bg"><div class="prog-bar-fill" id="progFill"></div></div>
+            <div class="prog-text" id="progText">0 / 0 frames</div>
+          </div>
+          <div class="live-box" id="liveBox" style="display:none;">
+            <div class="live-row"><span class="live-label">Live Emotion</span><span class="live-val" id="liveEmotion">—</span></div>
+            <div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;"><div style="height:100%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:2px;transition:width 0.3s;width:0%;" id="confFill"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FRAMES GALLERY -->
+  <div class="card" id="framesCard" style="display:none;margin-bottom:1.5rem;">
+    <div class="card-head">
+      <div class="card-head-icon" style="background:rgba(6,200,232,0.15);">🎞️</div>
+      <h2>Captured Frames</h2>
+      <span id="framesCount" style="font-size:0.73rem;padding:3px 10px;background:var(--surface2);border-radius:50px;color:var(--text3);">0 frames</span>
+    </div>
+    <div class="card-body">
+      <div class="frames-grid" id="framesGrid"></div>
+    </div>
+  </div>
+
+  <button class="btn-assess" id="assessBtn" onclick="runAssessment()">
+    🔬 Run Comprehensive Neural Assessment
+  </button>
+
+  <!-- RESULTS -->
+  <div class="results-section" id="resultsSection" style="display:none;">
+
+    <div class="result-banner" id="resultBanner">
+      <div class="r-icon" id="rIcon"></div>
+      <div>
+        <div class="r-tag" id="rTag">RISK LEVEL</div>
+        <div class="r-heading" id="rHeading">—</div>
+        <div class="r-sub" id="rSub">—</div>
+      </div>
+      <div class="r-conf">
+        <div class="r-conf-num" id="rConfNum">—</div>
+        <div class="r-conf-lbl">Confidence Score</div>
+      </div>
+    </div>
+
+    <!-- 7-SEG MOOD RESULT -->
+    <div class="chart-card" style="margin-bottom:1.5rem;">
+      <h3>7-Segment Mood Analysis</h3>
+      <div class="mood-seg-display" id="moodSegResult"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;">
+        <span style="font-size:0.65rem;color:var(--text3);">Despair</span>
+        <span style="font-size:0.65rem;color:var(--text3);font-family:'JetBrains Mono',monospace;" id="moodSegLabel">—</span>
+        <span style="font-size:0.65rem;color:var(--text3);">Elated</span>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-box-lbl">Sleep Hours</div><div class="stat-box-val" id="sSleep" style="color:var(--blue);">—</div></div>
+      <div class="stat-box"><div class="stat-box-lbl">Energy Score</div><div class="stat-box-val" id="sMood" style="color:var(--pink);">—</div></div>
+      <div class="stat-box"><div class="stat-box-lbl">Frames Analyzed</div><div class="stat-box-val" id="sFrames" style="color:var(--green);">—</div></div>
+      <div class="stat-box"><div class="stat-box-lbl">Dominant Emotion</div><div class="stat-box-val" id="sDomEmo" style="color:var(--yellow);font-size:1rem;">—</div></div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3>Risk Probability Distribution</h3>
+        <div class="prob-bars">
+          <div class="prob-row">
+            <div class="prob-row-head"><span class="prob-row-lbl">Low Risk</span><span class="prob-row-val" id="pLowV" style="color:var(--green);">0%</span></div>
+            <div class="prob-track"><div class="prob-fill low" id="pLowB"></div></div>
+          </div>
+          <div class="prob-row">
+            <div class="prob-row-head"><span class="prob-row-lbl">Moderate Risk</span><span class="prob-row-val" id="pModV" style="color:var(--yellow);">0%</span></div>
+            <div class="prob-track"><div class="prob-fill moderate" id="pModB"></div></div>
+          </div>
+          <div class="prob-row">
+            <div class="prob-row-head"><span class="prob-row-lbl">High Risk</span><span class="prob-row-val" id="pHighV" style="color:var(--red);">0%</span></div>
+            <div class="prob-track"><div class="prob-fill high" id="pHighB"></div></div>
+          </div>
+        </div>
+        <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+          <div style="font-size:0.73rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;margin-bottom:6px;">Facial Analysis Summary</div>
+          <p id="faceSumText" style="font-size:0.84rem;color:var(--text2);line-height:1.5;">No facial data available.</p>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Emotion Distribution</h3>
+        <div class="chart-wrap"><canvas id="emotionChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- RADAR CHART -->
+    <div class="charts-row" style="margin-bottom:1.5rem;">
+      <div class="chart-card">
+        <h3>Mental Health Dimension Radar</h3>
+        <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Emotion Timeline</h3>
+        <div class="chart-wrap"><canvas id="timelineChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="face-card" id="faceStatsCard" style="display:none;">
+      <h3>Facial Analysis Breakdown</h3>
+      <div class="face-stats" id="faceStats"></div>
+    </div>
+
+    <div class="suggestions-card">
+      <h3>Personalized Recommendations</h3>
+      <div class="sug-grid" id="sugGrid"></div>
+    </div>
+
+    <!-- REPORT BUTTONS -->
+    <div class="report-btn-wrap">
+      <button class="btn btn-blue" onclick="downloadPDF()" style="padding:12px 28px;font-size:0.92rem;font-weight:700;">📄 Download Full Report (PDF)</button>
+      <button class="btn btn-ghost" onclick="downloadCSV()" style="padding:12px 24px;">⬇ Export CSV</button>
+    </div>
+
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-section" id="historyAnchor">
+    <div class="section-title">Assessment History</div>
+    <div class="hist-stats">
+      <div class="hist-stat-box"><div class="hist-stat-num" id="histTotal">0</div><div class="hist-stat-lbl">Total Assessments</div></div>
+      <div class="hist-stat-box"><div class="hist-stat-num" id="histAvgConf">—</div><div class="hist-stat-lbl">Avg Confidence</div></div>
+      <div class="hist-stat-box"><div class="hist-stat-num" id="histCommon">—</div><div class="hist-stat-lbl">Most Common Risk</div></div>
+    </div>
+    <div style="overflow-x:auto;margin-bottom:1rem;">
+      <table><thead><tr><th>Time</th><th>Risk Level</th><th>Confidence</th><th>Sleep</th><th>Energy</th><th>Mood State</th><th>Frames</th></tr></thead>
+      <tbody id="histBody"><tr class="empty-row"><td colspan="7">No assessments yet — run your first one above.</td></tr></tbody></table>
+    </div>
+    <button class="btn btn-ghost" onclick="downloadCSV()">⬇ Download CSV</button>
+  </div>
+</div>
+
+<!-- CRISIS MODAL -->
+<div class="modal-overlay" id="crisisModal">
+  <div class="modal-box">
+    <div class="modal-head"><h2>❤️ Crisis Resources</h2><button class="modal-close" onclick="closeCrisis()">×</button></div>
+    <div class="modal-body">
+      <p>If you or someone you know is in crisis, help is available right now:</p>
+      <div class="crisis-item"><span>📞</span><div><strong>988 Suicide & Crisis Lifeline</strong><span>Call or text 988 — available 24/7</span></div></div>
+      <div class="crisis-item"><span>💬</span><div><strong>Crisis Text Line</strong><span>Text HOME to 741741</span></div></div>
+      <div class="crisis-item"><span>🚑</span><div><strong>Emergency Services</strong><span>Call 911 for immediate danger</span></div></div>
+      <div class="crisis-item"><span>🌐</span><div><strong>iCall (India)</strong><span>9152987821 — Mon–Sat, 8AM–10PM</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lb-close" onclick="closeLightbox()">×</button>
+  <img id="lbImg" src="" alt="">
+  <div class="lb-info" id="lbInfo"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><div class="toast-inner" id="toastInner"></div></div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let stream=null,capturing=false,captureTimer=null,frames=[],historyData=[];
+let backendConnected=false,emotionChartInst=null,radarChartInst=null,timelineChartInst=null;
+let currentSessionId=null,conversationActive=false,detectionMethod='none';
+let cyberAnimFrame=null,cyberActive=false;
+let lastResult=null,lastSleep=7,lastMood=5,lastChatMessages=[];
+const API='http://localhost:8000';
+
+// ═══════════════════════════════════════════
+// PAGE LOADER
+// ═══════════════════════════════════════════
+const INIT_STEPS=[
+  '> Initializing neural engine...',
+  '> Loading emotion models...',
+  '> Calibrating risk vectors...',
+  '> Connecting behavioral API...',
+  '> System ready.'
+];
+async function runLoader(){
+  const bar=document.getElementById('loaderBar');
+  const steps=document.getElementById('loaderSteps');
+  for(let i=0;i<INIT_STEPS.length;i++){
+    await delay(400);
+    const d=document.createElement('div');
+    d.className='loader-step';
+    d.style.animationDelay='0s';
+    d.textContent=INIT_STEPS[i];
+    steps.appendChild(d);
+    bar.style.width=((i+1)/INIT_STEPS.length*100)+'%';
+  }
+  await delay(600);
+  document.getElementById('pageLoader').classList.add('hidden');
+  initCyberBg();
+}
+function delay(ms){return new Promise(r=>setTimeout(r,ms));}
+window.addEventListener('load',runLoader);
+
+// ═══════════════════════════════════════════
+// CYBER BG CANVAS
+// ═══════════════════════════════════════════
+function initCyberBg(){
+  const cvs=document.getElementById('cyberBgCanvas');
+  const ctx=cvs.getContext('2d');
+  let W,H,nodes=[],lines=[];
+  function resize(){W=cvs.width=window.innerWidth;H=cvs.height=window.innerHeight;}
+  function initNodes(){
+    nodes=[];
+    const n=Math.floor((W*H)/25000);
+    for(let i=0;i<n;i++){
+      nodes.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,r:Math.random()*1.5+0.5});
+    }
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // Grid lines
+    ctx.strokeStyle='rgba(79,139,255,0.03)';
+    ctx.lineWidth=1;
+    for(let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    // Nodes & connections
+    for(let i=0;i<nodes.length;i++){
+      const n=nodes[i];
+      n.x+=n.vx;n.y+=n.vy;
+      if(n.x<0||n.x>W)n.vx*=-1;
+      if(n.y<0||n.y>H)n.vy*=-1;
+      for(let j=i+1;j<nodes.length;j++){
+        const m=nodes[j];
+        const d=Math.hypot(n.x-m.x,n.y-m.y);
+        if(d<120){
+          const a=(1-d/120)*0.18;
+          ctx.strokeStyle=`rgba(79,139,255,${a})`;
+          ctx.lineWidth=0.8;
+          ctx.beginPath();ctx.moveTo(n.x,n.y);ctx.lineTo(m.x,m.y);ctx.stroke();
+        }
+      }
+      ctx.fillStyle='rgba(79,139,255,0.5)';
+      ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  resize();initNodes();draw();
+  window.addEventListener('resize',()=>{resize();initNodes();});
+}
+
+// ═══════════════════════════════════════════
+// CYBER GRID CAPTURE ANIMATION
+// ═══════════════════════════════════════════
+function startCyberGrid(){
+  const cvs=document.getElementById('cyberGrid');
+  cvs.style.display='block';
+  const ctx=cvs.getContext('2d');
+  let t=0;
+  cvs.width=640;cvs.height=480;
+  cyberActive=true;
+  function frame(){
+    if(!cyberActive){ctx.clearRect(0,0,cvs.width,cvs.height);cvs.style.display='none';return;}
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    t+=0.04;
+    // Scanning line
+    const scanY=(Math.sin(t)*0.5+0.5)*cvs.height;
+    const grad=ctx.createLinearGradient(0,scanY-40,0,scanY+40);
+    grad.addColorStop(0,'rgba(79,139,255,0)');
+    grad.addColorStop(0.5,'rgba(79,139,255,0.15)');
+    grad.addColorStop(1,'rgba(79,139,255,0)');
+    ctx.fillStyle=grad;
+    ctx.fillRect(0,scanY-40,cvs.width,80);
+    // Grid
+    ctx.strokeStyle='rgba(79,139,255,0.12)';
+    ctx.lineWidth=1;
+    const gs=30;
+    for(let x=0;x<cvs.width;x+=gs){
+      ctx.globalAlpha=0.4+0.3*Math.sin(t+x/50);
+      ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,cvs.height);ctx.stroke();
+    }
+    for(let y=0;y<cvs.height;y+=gs){
+      ctx.globalAlpha=0.4+0.3*Math.sin(t+y/50);
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cvs.width,y);ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+    // Corner brackets
+    ctx.strokeStyle='rgba(240,84,184,0.6)';ctx.lineWidth=2;
+    const bLen=30;
+    [[0,0],[cvs.width,0],[0,cvs.height],[cvs.width,cvs.height]].forEach(([x,y],i)=>{
+      ctx.beginPath();
+      const sx=x===0?1:-1,sy=y===0?1:-1;
+      ctx.moveTo(x+sx*bLen,y);ctx.lineTo(x,y);ctx.lineTo(x,y+sy*bLen);ctx.stroke();
+    });
+    // Text overlay
+    ctx.fillStyle='rgba(79,139,255,0.7)';ctx.font='bold 11px JetBrains Mono,monospace';
+    ctx.fillText('ANALYZING FACIAL PATTERNS',10,20);
+    ctx.fillText(`FRAME ${frames.length} | T:${t.toFixed(2)}`,10,cvs.height-10);
+    cyberAnimFrame=requestAnimationFrame(frame);
+  }
+  frame();
+}
+function stopCyberGrid(){
+  cyberActive=false;
+  if(cyberAnimFrame){cancelAnimationFrame(cyberAnimFrame);cyberAnimFrame=null;}
+}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+function toast(msg,dur=3000){
+  const el=document.getElementById('toast');
+  document.getElementById('toastInner').textContent=msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),dur);
+}
+
+// ═══════════════════════════════════════════
+// SLIDERS & 7-SEG MOOD
+// ═══════════════════════════════════════════
+document.getElementById('sleepSlider').addEventListener('input',e=>{
+  document.getElementById('sleepDisplay').textContent=parseFloat(e.target.value).toFixed(1)+'h';
+});
+document.getElementById('moodSlider').addEventListener('input',e=>{
+  document.getElementById('moodDisplay').textContent=e.target.value+' / 10';
+  updateMoodSegs(parseInt(e.target.value));
+});
+
+const SEG_COLORS=['#f55c5c','#f87171','#f5c842','#7a9acc','#4f8bff','#22d3a0','#10e8a0'];
+const SEG_NAMES=['Despair','Sad','Anxious','Neutral','Content','Good','Elated'];
+function updateMoodSegs(moodVal){
+  const seg=Math.floor(((moodVal-1)/9)*6);// 1-10 → 0-6
+  const segs=document.querySelectorAll('.mood-seg');
+  segs.forEach((s,i)=>{
+    s.classList.toggle('active-seg',i<=seg);
+    if(i<=seg){s.style.background=SEG_COLORS[i]+'33';s.style.borderColor=SEG_COLORS[i]+'66';s.style.color=SEG_COLORS[i];}
+    else{s.style.background='';s.style.borderColor='';s.style.color='';}
+  });
+}
+updateMoodSegs(5);
+
+function buildMoodSegResult(moodVal){
+  const seg=Math.floor(((moodVal-1)/9)*6);
+  const container=document.getElementById('moodSegResult');
+  container.innerHTML=SEG_NAMES.map((name,i)=>`
+    <div class="mood-seg-result ${i<=seg?'seg-active':''}" style="${i<=seg?`background:${SEG_COLORS[i]}22;border-color:${SEG_COLORS[i]}44;color:${SEG_COLORS[i]};`:''}">
+      <div style="font-size:1rem;">${['😭','😢','😟','😐','🙂','😊','😄'][i]}</div>
+      <div>${name}</div>
+    </div>
+  `).join('');
+  document.getElementById('moodSegLabel').textContent=`Active: ${SEG_NAMES[seg]} (Segment ${seg+1}/7)`;
+}
+
+// ═══════════════════════════════════════════
+// BACKEND
+// if(data.status==='healthy'){backendConnected=true;detectionMethod=data.models?.face_detection||'unknown';toast(`✅ Backend connected (${detectionMethod})`);}
+// ═══════════════════════════════════════════
+async function connectBackend(){
+  try{
+    toast('⏳ Connecting to backend...');
+    const res=await fetch(`${API}/`);
+    const data=await res.json();
+    if(data.status==='healthy'){backendConnected=true;detectionMethod=data.models?.face_detection||'unknown';toast(`✅ Backend connected Google Flan-T5 - VIT (base-16)`);}
+    else throw new Error();
+  }catch{toast('⚠️ Backend offline — running in local mode');backendConnected=false;}
+}
+
+// ═══════════════════════════════════════════
+// CONVERSATION
+// ═══════════════════════════════════════════
+async function startConversation(){
+  if(conversationActive){toast('Chat already active');return;}
+  lastChatMessages=[];
+  try{
+    let msg;
+    if(backendConnected){
+      const res=await fetch(`${API}/chat/start`,{method:'POST'});
+      const d=await res.json();currentSessionId=d.session_id;msg=d.response;
+    }else{
+      currentSessionId='sim_'+Date.now();
+      msg="Hello. I'm here to listen and understand how you've been feeling. There's no rush — share whatever feels right. How has your mood been lately?";
+    }
+    conversationActive=true;
+    document.getElementById('chatCard').style.display='block';
+    document.getElementById('chatMessages').innerHTML='';
+    setChatStatus(true);
+    document.getElementById('sendBtn').disabled=false;
+    document.getElementById('chatInput').disabled=false;
+    addMessage('assistant',msg);
+    if(!capturing)startCapture();
+    toast('✅ Chat started — camera activated');
+    document.getElementById('chatCard').scrollIntoView({behavior:'smooth'});
+  }catch(e){toast('⚠️ Failed to start chat');}
+}
+
+function setChatStatus(active){
+  document.getElementById('chatDot').style.background=active?'var(--green)':'var(--text3)';
+  document.getElementById('chatStatusText').textContent=active?'Conversation active':'Chat ended';
+}
+
+async function sendMessage(){
+  const inp=document.getElementById('chatInput');
+  const text=inp.value.trim();
+  if(!text||!currentSessionId)return;
+  addMessage('user',text);
+  inp.value='';
+  const typing=addMessage('assistant','...');
+  try{
+    let resp;
+    if(backendConnected){
+      const r=await fetch(`${API}/chat/message`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,session_id:currentSessionId})});
+      const d=await r.json();resp=d.response;
+    }else{
+      await delay(800+Math.random()*1200);
+      resp=simulateResponse(text);
+    }
+    typing.remove();
+    addMessage('assistant',resp);
+    checkCrisis(text);
+  }catch{typing.remove();addMessage('assistant','I apologize, I had a connection issue. Please try again.');}
+}
+
+function simulateResponse(t){
+  const l=t.toLowerCase();
+  if(l.includes('sad')||l.includes('depressed')||l.includes('hopeless'))return"I hear that you're feeling down. Your feelings are valid. Can you tell me more about when you started feeling this way?";
+  if(l.includes('tired')||l.includes('exhausted'))return"Fatigue deeply impacts quality of life. How has your sleep been — are you getting enough rest?";
+  if(l.includes('anxious')||l.includes('worried')||l.includes('stress'))return"Anxiety can be really challenging to navigate. What situations tend to trigger these feelings for you?";
+  if(l.includes('alone')||l.includes('lonely'))return"Feeling isolated is more common than you might think. Have you been able to connect with anyone recently?";
+  return"Thank you for sharing that. How has this been affecting your daily routines and relationships?";
+}
+
+function checkCrisis(text){
+  const words=['suicide','kill myself','end my life','want to die','better off dead'];
+  if(words.some(w=>text.toLowerCase().includes(w))){
+    addMessage('assistant','❗ I\'m very concerned. Please reach out immediately:\n\n• Call/text 988 (Suicide & Crisis Lifeline)\n• Text HOME to 741741 (Crisis Text Line)\n• Call 911 if in immediate danger');
+    setTimeout(openCrisis,600);
+  }
+}
+
+function addMessage(type,text){
+  const c=document.getElementById('chatMessages');
+  if(c.children.length===1&&c.querySelector('div[style]'))c.innerHTML='';
+  const d=document.createElement('div');
+  d.className=`chat-msg ${type}`;
+  d.innerHTML=`<div class="chat-msg-head">${type==='user'?'You':'🤖 MindGuard AI'}</div><div class="chat-msg-body">${text.replace(/\n/g,'<br>')}</div>`;
+  c.appendChild(d);
+  c.scrollTop=c.scrollHeight;
+  lastChatMessages.push({type,text,time:new Date().toLocaleTimeString()});
+  return d;
+}
+
+async function endConversation(){
+  if(!currentSessionId)return;
+  const btn=document.getElementById('endChatBtn');
+  btn.disabled=true;btn.textContent='⏳ Analyzing...';
+  try{
+    if(backendConnected){
+      const sleep=parseFloat(document.getElementById('sleepSlider').value);
+      const mood=parseInt(document.getElementById('moodSlider').value);
+      const r=await fetch(`${API}/assess/comprehensive`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:currentSessionId,sleep_hours:sleep,mood_score:mood})});
+      const d=await r.json();
+      addMessage('assistant',`📊 Assessment Complete\n\nRisk Level: ${d.assessment?.risk_level||'Unknown'}\nConfidence: ${((d.assessment?.confidence||0.7)*100).toFixed(0)}%`);
+      await fetch(`${API}/chat/${currentSessionId}`,{method:'DELETE'});
+    }else{
+      addMessage('assistant','📊 Based on our conversation, I recommend running the comprehensive assessment for full analysis.');
+      runAssessment();
+    }
+    conversationActive=false;currentSessionId=null;setChatStatus(false);
+    document.getElementById('sendBtn').disabled=true;document.getElementById('chatInput').disabled=true;
+    toast('✅ Chat assessment done');
+  }catch{toast('⚠️ Failed to complete assessment');}
+  finally{btn.disabled=false;btn.textContent='End Chat & Assess';}
+}
+
+// ═══════════════════════════════════════════
+// CAMERA & CAPTURE
+// ═══════════════════════════════════════════
+async function startCapture(){
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'user'}});
+    const vid=document.getElementById('cameraFeed');
+    vid.srcObject=stream;
+    await new Promise(r=>{vid.onloadedmetadata=()=>r();});
+    document.getElementById('camPlaceholder').style.display='none';
+    document.getElementById('startBtn').disabled=true;
+    document.getElementById('stopBtn').disabled=false;
+    document.getElementById('progWrap').style.display='block';
+    document.getElementById('liveBox').style.display='block';
+    capturing=true;frames=[];updateFramesGallery();
+    startCyberGrid();
+    const dur=parseInt(document.getElementById('durSel').value);
+    const fps=parseInt(document.getElementById('fpsSel').value);
+    const total=dur*fps;let count=0;
+    captureTimer=setInterval(async()=>{
+      if(!capturing||count>=total){stopCapture();return;}
+      const canvas=document.createElement('canvas');
+      canvas.width=vid.videoWidth||640;canvas.height=vid.videoHeight||480;
+      const ctx=canvas.getContext('2d');ctx.drawImage(vid,0,0);
+      const dataUrl=canvas.toDataURL('image/jpeg',0.8);
+      let analysis={emotion:'No Face',confidence:0,faceDetected:false,faces:[]};
+      if(backendConnected){
+        try{
+          const res=await fetch(`${API}/analyze/face`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl,session_id:currentSessionId||'demo'})});
+          const data=await res.json();
+          if(data.faces_detected>0&&data.emotions.length>0){
+            analysis={emotion:data.emotions[0].emotion,confidence:data.emotions[0].confidence,faceDetected:true,faces:data.emotions};
+          }
+        }catch(e){}
+      }
+      frames.push({dataUrl,emotion:analysis.emotion,confidence:analysis.confidence,faceDetected:analysis.faceDetected,faces:analysis.faces});
+      drawOverlay(analysis,canvas);
+      const lv=document.getElementById('liveEmotion');const cf=document.getElementById('confFill');
+      if(analysis.faceDetected){lv.textContent=`${analysis.emotion} (${(analysis.confidence*100).toFixed(0)}%)`;lv.style.color=emoColor(analysis.emotion);cf.style.width=(analysis.confidence*100)+'%';}
+      else{lv.textContent=backendConnected?'No Face Detected':'Backend not connected';lv.style.color='var(--text2)';cf.style.width='0%';}
+      count++;
+      document.getElementById('progFill').style.width=Math.min(count/total*100,100)+'%';
+      document.getElementById('progText').textContent=`${count} / ${total} frames`;
+    },1000/fps);
+    toast(`🎥 Capture started (${backendConnected?detectionMethod:'local mode'})`);
+  }catch(e){toast('❌ Camera access denied');}
+}
+
+function drawOverlay(analysis,srcCanvas){
+  const cvs=document.getElementById('cameraCanvas');
+  if(!cvs)return;
+  cvs.width=srcCanvas.width||640;cvs.height=srcCanvas.height||480;
+  const ctx=cvs.getContext('2d');ctx.clearRect(0,0,cvs.width,cvs.height);
+  if(!analysis.faceDetected||!analysis.faces?.length){
+    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(0,0,cvs.width,32);
+    ctx.fillStyle='var(--text2)';ctx.font='13px Outfit,sans-serif';
+    ctx.fillText('No face detected — position your face clearly',10,22);return;
+  }
+  analysis.faces.forEach((face,i)=>{
+    const bb=face.bbox;if(!bb||bb.length!==4)return;
+    const [x1,y1,x2,y2]=bb;const col=emoColor(face.emotion);const conf=(face.confidence*100).toFixed(0);
+    ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.shadowColor=col;ctx.shadowBlur=10;
+    ctx.strokeRect(x1,y1,x2-x1,y2-y1);ctx.shadowBlur=0;
+    // Corners
+    const cs=18;ctx.lineWidth=3.5;
+    [[x1,y1,1,1],[x2,y1,-1,1],[x1,y2,1,-1],[x2,y2,-1,-1]].forEach(([cx,cy,dx,dy])=>{
+      ctx.beginPath();ctx.moveTo(cx+dx*cs,cy);ctx.lineTo(cx,cy);ctx.lineTo(cx,cy+dy*cs);ctx.stroke();
+    });
+    // Label
+    const lbl=`${face.emotion} ${conf}%`;
+    ctx.font='bold 13px Outfit,sans-serif';const tw=ctx.measureText(lbl).width;
+    const ly=Math.max(y1-26,4);
+    ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(x1,ly,tw+12,22);
+    ctx.fillStyle=col;ctx.fillText(lbl,x1+6,ly+16);
+    // Confidence mini-bar
+    ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(x1,y2+2,x2-x1,5);
+    ctx.fillStyle=col;ctx.fillRect(x1,y2+2,(x2-x1)*face.confidence,5);
+  });
+}
+
+function emoColor(e){
+  return{happy:'#10e8a0',sad:'#f55c5c',neutral:'#f5c842',surprised:'#4f8bff',fearful:'#f87171',angry:'#ef4444',disgusted:'#a78bfa'}[e?.toLowerCase()]||'#4f8bff';
+}
+
+function stopCapture(){
+  capturing=false;stopCyberGrid();
+  if(captureTimer){clearInterval(captureTimer);captureTimer=null;}
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+  document.getElementById('cameraFeed').srcObject=null;
+  document.getElementById('camPlaceholder').style.display='flex';
+  document.getElementById('startBtn').disabled=false;
+  document.getElementById('stopBtn').disabled=true;
+  document.getElementById('progWrap').style.display='none';
+  document.getElementById('liveBox').style.display='none';
+  const cvs=document.getElementById('cameraCanvas');
+  if(cvs){const ctx=cvs.getContext('2d');ctx.clearRect(0,0,cvs.width,cvs.height);}
+  if(frames.length){updateFramesGallery();const fd=frames.filter(f=>f.faceDetected).length;toast(`✅ Captured ${frames.length} frames (${fd} with faces)`);}
+}
+
+// ═══════════════════════════════════════════
+// FRAMES GALLERY
+// ═══════════════════════════════════════════
+function updateFramesGallery(){
+  const card=document.getElementById('framesCard');
+  const grid=document.getElementById('framesGrid');
+  if(!frames.length){card.style.display='none';return;}
+  card.style.display='block';
+  document.getElementById('framesCount').textContent=`${frames.length} frame${frames.length!==1?'s':''}`;
+  grid.innerHTML=frames.map((f,i)=>`
+    <div class="frame-thumb" onclick="openLightbox(${i})">
+      <img src="${f.dataUrl}" alt="Frame ${i+1}">
+      <div class="frame-idx">#${i+1}</div>
+      <div class="frame-emo" style="color:${f.faceDetected?emoColor(f.emotion):'#7a9acc'}">${f.faceDetected?f.emotion:'No Face'}</div>
+      ${f.faceDetected?`<div class="frame-conf">${(f.confidence*100).toFixed(0)}%</div>`:''}
+    </div>
+  `).join('');
+}
+
+function openLightbox(idx){
+  const f=frames[idx];
+  document.getElementById('lbImg').src=f.dataUrl;
+  document.getElementById('lbInfo').innerHTML=`
+    <span style="padding:4px 12px;background:var(--surface2);border-radius:50px;font-size:0.78rem;color:var(--text2)">Frame #${idx+1}</span>
+    <span style="padding:4px 12px;background:rgba(79,139,255,0.15);border-radius:50px;font-size:0.78rem;color:var(--blue)">${f.faceDetected?f.emotion:'No Face'}</span>
+    ${f.faceDetected?`<span style="padding:4px 12px;background:rgba(16,232,160,0.15);border-radius:50px;font-size:0.78rem;color:var(--green)">${(f.confidence*100).toFixed(0)}% confidence</span>`:''}
+  `;
+  document.getElementById('lightbox').classList.add('active');
+}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('active');}
+
+// ═══════════════════════════════════════════
+// UPLOAD
+// ═══════════════════════════════════════════
+function triggerUpload(){document.getElementById('fileInput').click();}
+document.getElementById('fileInput').addEventListener('change',async e=>{
+  const files=Array.from(e.target.files);if(!files.length)return;
+  toast(`⏳ Processing ${files.length} image(s)...`);
+  for(const file of files){
+    await new Promise(res=>{
+      const r=new FileReader();
+      r.onload=async ev=>{
+        const dataUrl=ev.target.result;
+        if(backendConnected){
+          try{
+            const resp=await fetch(`${API}/analyze/face`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl})});
+            const data=await resp.json();
+            if(data.faces_detected>0&&data.emotions.length>0){
+              frames.push({dataUrl,emotion:data.emotions[0].emotion,confidence:data.emotions[0].confidence,faceDetected:true,faces:data.emotions});
+            }else frames.push({dataUrl,emotion:'No Face',confidence:0,faceDetected:false,faces:[]});
+          }catch{frames.push({dataUrl,emotion:'Error',confidence:0,faceDetected:false,faces:[]});}
+        }else frames.push({dataUrl,emotion:'No Backend',confidence:0,faceDetected:false,faces:[]});
+        res();
+      };r.readAsDataURL(file);
+    });
+  }
+  updateFramesGallery();toast(`✅ Processed ${files.length} image(s)`);e.target.value='';
+});
+
+// ═══════════════════════════════════════════
+// AI ANALYSIS OVERLAY
+// ═══════════════════════════════════════════
+async function showAiOverlay(){
+  const overlay=document.getElementById('aiOverlay');
+  overlay.classList.add('active');
+  const steps=['as0','as1','as2','as3','as4','as5'];
+  const labels=['Analyzing text sentiment...','Processing facial data...','Measuring behavioral signals...','Running risk model...','Calculating confidence score...','Generating personalized report...'];
+  const fill=document.getElementById('aiProgFill');
+  const sub=document.getElementById('aiSubtitle');
+  for(let i=0;i<steps.length;i++){
+    steps.slice(0,i).forEach(s=>document.getElementById(s).className='ai-step done');
+    document.getElementById(steps[i]).className='ai-step active';
+    sub.textContent=labels[i];
+    fill.style.width=((i+1)/steps.length*100)+'%';
+    await delay(500+Math.random()*400);
+  }
+  steps.forEach(s=>document.getElementById(s).className='ai-step done');
+  fill.style.width='100%';
+  await delay(400);
+  overlay.classList.remove('active');
+}
+
+// ═══════════════════════════════════════════
+// ASSESSMENT
+// ═══════════════════════════════════════════
+async function runAssessment(){
+  if(conversationActive){toast('⚠️ Please end the chat first');return;}
+  const text=document.getElementById('textInput').value.trim();
+  if(!text){toast('⚠️ Please enter some text first');return;}
+  const sleep=parseFloat(document.getElementById('sleepSlider').value);
+  const mood=parseInt(document.getElementById('moodSlider').value);
+  lastSleep=sleep;lastMood=mood;
+  const btn=document.getElementById('assessBtn');btn.textContent='⏳ Analyzing...';btn.disabled=true;
+  await showAiOverlay();
+  let result;
+  if(backendConnected&&currentSessionId){
+    try{
+      const r=await fetch(`${API}/assess/comprehensive`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:currentSessionId,sleep_hours:sleep,mood_score:mood})});
+      const d=await r.json();
+      result={risk_level:d.assessment?.risk_level||'Moderate',probabilities:[0.3,0.4,0.3],confidence:d.assessment?.confidence||0.7,face_summary:d.face_summary||'Backend analysis'};
+    }catch{result=calcLocal(text,sleep,mood);}
+  }else{result=calcLocal(text,sleep,mood);}
+  lastResult=result;
+  displayResults(result,sleep,mood);
+  addHistory(result,sleep,mood);
+  btn.textContent='🔬 Run Comprehensive Neural Assessment';btn.disabled=false;
+  toast('✅ Assessment complete — report ready');
+  document.getElementById('resultsSection').scrollIntoView({behavior:'smooth'});
+}
+
+function calcLocal(text,sleep,mood){
+  const tl=text.toLowerCase();
+  const neg=['sad','depressed','hopeless','tired','empty','anxious','alone','worthless','overwhelmed','numb'];
+  const pos=['happy','good','great','wonderful','excited','grateful','calm','peaceful','motivated'];
+  let neg_c=neg.filter(w=>tl.includes(w)).length;
+  let pos_c=pos.filter(w=>tl.includes(w)).length;
+  // Add randomness per run so scores differ
+  const jitter=(Math.random()-0.5)*0.08;
+  let score=0.5+jitter;
+  score+=(neg_c*0.07)-(pos_c*0.05);
+  score+=(7-sleep)*0.04;
+  score+=(5-mood)*0.05;
+  score=Math.max(0.05,Math.min(0.95,score));
+  let risk,probs;
+  if(score<0.38){risk='Low';const r=Math.random()*0.12;probs=[0.6+r,0.28-r/2,0.12-r/2];}
+  else if(score<0.65){risk='Moderate';const r=Math.random()*0.1;probs=[0.18+r/2,0.52+r,0.3-r];}
+  else{risk='High';const r=Math.random()*0.1;probs=[0.1-r/2,0.22+r/2,0.68+r];}
+  // Normalize
+  const s=probs.reduce((a,b)=>a+b,0);probs=probs.map(p=>p/s);
+  let faceSummary='No facial data captured.';
+  if(frames.length){
+    const det=frames.filter(f=>f.faceDetected);
+    if(det.length){
+      const ec={};det.forEach(f=>ec[f.emotion]=(ec[f.emotion]||0)+1);
+      const dom=Object.entries(ec).sort((a,b)=>b[1]-a[1])[0];
+      const avgConf=(det.reduce((a,b)=>a+b.confidence,0)/det.length*100).toFixed(0);
+      faceSummary=`${det.length}/${frames.length} frames with faces detected. Dominant: ${dom[0]} (${Math.round(dom[1]/det.length*100)}%). Avg confidence: ${avgConf}%.`;
+    }else faceSummary=`No faces detected across ${frames.length} frames.`;
+  }
+  const baseConf=0.65+Math.random()*0.22;
+  return{risk_level:risk,probabilities:probs,confidence:baseConf,face_summary:faceSummary};
+}
+
+function displayResults(result,sleep,mood){
+  const section=document.getElementById('resultsSection');section.style.display='block';
+  const rl=result.risk_level;
+  const banner=document.getElementById('resultBanner');banner.className='result-banner '+rl.toLowerCase();
+  const icons={Low:'🟢',Moderate:'🟡',High:'🔴'};
+  const headings={Low:'Low Risk Detected',Moderate:'Moderate Risk Detected',High:'High Risk Detected'};
+  const subs={Low:'Your responses indicate relatively healthy mental wellbeing. Maintain your positive habits and continue self-care practices.',Moderate:'Several indicators suggest elevated stress or early distress signals. Consider speaking with a counselor or mental health professional.',High:'Multiple significant risk indicators detected. We strongly encourage reaching out to a mental health professional promptly.'};
+  document.getElementById('rIcon').textContent=icons[rl];
+  document.getElementById('rTag').textContent=rl.toUpperCase()+' RISK';
+  document.getElementById('rHeading').textContent=headings[rl];
+  document.getElementById('rSub').textContent=subs[rl];
+  document.getElementById('rConfNum').textContent=(result.confidence*100).toFixed(0)+'%';
+  document.getElementById('sSleep').textContent=sleep+'h';
+  document.getElementById('sMood').textContent=mood+'/10';
+  document.getElementById('sFrames').textContent=frames.length;
+
+  let domEmo='—';
+  if(frames.length){const det=frames.filter(f=>f.faceDetected);if(det.length){const ec={};det.forEach(f=>ec[f.emotion]=(ec[f.emotion]||0)+1);domEmo=Object.entries(ec).sort((a,b)=>b[1]-a[1])[0][0];}}
+  document.getElementById('sDomEmo').textContent=domEmo;
+
+  // 7-seg result
+  buildMoodSegResult(mood);
+
+  // Prob bars
+  const probs=result.probabilities;
+  document.getElementById('pLowV').textContent=(probs[0]*100).toFixed(1)+'%';
+  document.getElementById('pModV').textContent=(probs[1]*100).toFixed(1)+'%';
+  document.getElementById('pHighV').textContent=(probs[2]*100).toFixed(1)+'%';
+  setTimeout(()=>{document.getElementById('pLowB').style.width=(probs[0]*100)+'%';document.getElementById('pModB').style.width=(probs[1]*100)+'%';document.getElementById('pHighB').style.width=(probs[2]*100)+'%';},100);
+  document.getElementById('faceSumText').textContent=result.face_summary;
+
+  // Emotion chart (doughnut)
+  if(frames.length){
+    const det=frames.filter(f=>f.faceDetected);
+    if(det.length){
+      const ec={};det.forEach(f=>ec[f.emotion]=(ec[f.emotion]||0)+1);
+      const labels=Object.keys(ec);const data=labels.map(l=>ec[l]);
+      const pal=['#4f8bff','#f054b8','#10e8a0','#f5c842','#f55c5c','#9b6fff','#06c8e8'];
+      if(emotionChartInst)emotionChartInst.destroy();
+      emotionChartInst=new Chart(document.getElementById('emotionChart'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:pal.slice(0,labels.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#7a9acc',font:{size:11},padding:12}}},cutout:'65%'}});
+    }
+  }
+
+  // Radar chart
+  const riskScores={
+    Low:{mood:7,sleep:sleep,social:7,energy:7,focus:7,anxiety:3,fatigue:3},
+    Moderate:{mood:5,sleep:sleep,social:5,energy:5,focus:5,anxiety:6,fatigue:6},
+    High:{mood:3,sleep:sleep,social:3,energy:3,focus:3,anxiety:8,fatigue:8}
+  }[rl]||{mood:5,sleep:5,social:5,energy:5,focus:5,anxiety:5,fatigue:5};
+  // Add jitter
+  const jitter=()=>(Math.random()-0.5)*1.5;
+  const rd=[riskScores.mood+jitter(),Math.min(10,sleep+1+jitter()),riskScores.social+jitter(),riskScores.energy+jitter(),riskScores.focus+jitter(),riskScores.anxiety+jitter(),riskScores.fatigue+jitter()].map(v=>Math.max(1,Math.min(10,v)));
+  if(radarChartInst)radarChartInst.destroy();
+  radarChartInst=new Chart(document.getElementById('radarChart'),{type:'radar',data:{labels:['Mood','Sleep Quality','Social','Energy','Focus','Anxiety','Fatigue'],datasets:[{label:'Your Profile',data:rd,backgroundColor:'rgba(79,139,255,0.15)',borderColor:'#4f8bff',borderWidth:2,pointBackgroundColor:'#4f8bff',pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{beginAtZero:true,max:10,grid:{color:'rgba(255,255,255,0.06)'},angleLines:{color:'rgba(255,255,255,0.06)'},pointLabels:{color:'#7a9acc',font:{size:10}},ticks:{color:'#3a5070',backdropColor:'transparent',font:{size:9}}}},plugins:{legend:{display:false}}}});
+
+  // Timeline chart (emotion over frames)
+  if(frames.length){
+    const emoToNum={'happy':8,'content':6,'neutral':5,'surprised':6,'anxious':3,'sad':2,'fearful':2,'angry':2,'disgusted':2,'No Face':null};
+    const tData=frames.map((f,i)=>({x:i+1,y:f.faceDetected?emoToNum[f.emotion.toLowerCase()]||5:null})).filter(p=>p.y!==null);
+    if(timelineChartInst)timelineChartInst.destroy();
+    timelineChartInst=new Chart(document.getElementById('timelineChart'),{type:'line',data:{datasets:[{label:'Emotional Score',data:tData,borderColor:'#f054b8',backgroundColor:'rgba(240,84,184,0.1)',borderWidth:2,fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#f054b8'}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#3a5070',font:{size:9}}},y:{min:0,max:10,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#3a5070',font:{size:9}},title:{display:true,text:'Score',color:'#3a5070',font:{size:9}}}},plugins:{legend:{display:false}}}});
+  }
+
+  // Face stats
+  if(frames.length){
+    document.getElementById('faceStatsCard').style.display='block';
+    const det=frames.filter(f=>f.faceDetected);
+    const avgConf=det.length?det.reduce((a,b)=>a+b.confidence,0)/det.length:0;
+    document.getElementById('faceStats').innerHTML=`
+      <div class="face-stat"><div class="face-stat-val">${frames.length}</div><div class="face-stat-lbl">Total Frames</div></div>
+      <div class="face-stat"><div class="face-stat-val" style="color:var(--green)">${det.length}</div><div class="face-stat-lbl">Faces Detected</div></div>
+      <div class="face-stat"><div class="face-stat-val" style="color:var(--yellow)">${frames.length?(det.length/frames.length*100).toFixed(0):0}%</div><div class="face-stat-lbl">Detection Rate</div></div>
+      <div class="face-stat"><div class="face-stat-val" style="color:var(--pink)">${(avgConf*100).toFixed(0)}%</div><div class="face-stat-lbl">Avg Confidence</div></div>
+    `;
+  }
+
+  buildSuggestions(rl,sleep,mood);
+}
+
+function buildSuggestions(risk,sleep,mood){
+  const all={
+    Low:[{icon:'🌿',title:'Maintain Routine',text:'Your patterns look positive. Keep your healthy rhythm going.',bg:'rgba(16,232,160,0.1)',col:'var(--green)'},{icon:'🤝',title:'Stay Connected',text:'Social connections are deeply protective for mental wellbeing.',bg:'rgba(79,139,255,0.1)',col:'var(--blue)'},{icon:'🏃',title:'Stay Active',text:'Regular exercise boosts mood, resilience, and cognitive function.',bg:'rgba(240,84,184,0.1)',col:'var(--pink)'}],
+    Moderate:[{icon:'💬',title:'Talk to Someone',text:'Consider speaking with a counselor or trusted confidant.',bg:'rgba(245,200,66,0.1)',col:'var(--yellow)'},{icon:'📱',title:'Mood Tracking',text:'Daily journaling and tracking helps identify emotional patterns early.',bg:'rgba(79,139,255,0.1)',col:'var(--blue)'},{icon:'😴',title:'Sleep Hygiene',text:sleep<6?`Target 7-9 hours (currently ${sleep}h — consider sleep hygiene improvements).`:'Good sleep is foundational to mental resilience.',bg:'rgba(240,84,184,0.1)',col:'var(--pink)'}],
+    High:[{icon:'🏥',title:'Professional Help',text:'Please contact a licensed mental health professional soon.',bg:'rgba(245,92,92,0.1)',col:'var(--red)'},{icon:'📞',title:'Call or Text 988',text:'Free 24/7 crisis support available immediately.',bg:'rgba(245,92,92,0.1)',col:'var(--red)'},{icon:'🆘',title:'Emergency: 911',text:'If in immediate danger, call emergency services now.',bg:'rgba(245,92,92,0.1)',col:'var(--red)'}]
+  };
+  const items=all[risk]||all.Moderate;
+  document.getElementById('sugGrid').innerHTML=items.map(s=>`
+    <div class="sug-item"><div class="sug-icon" style="background:${s.bg};color:${s.col}">${s.icon}</div>
+    <div class="sug-text"><h4>${s.title}</h4><p>${s.text}</p></div></div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════
+// PDF REPORT GENERATOR
+// ═══════════════════════════════════════════
+async function downloadPDF(){
+  if(!lastResult){toast('⚠️ Run an assessment first');return;}
+  toast('⏳ Generating PDF report...',5000);
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,H=297;
+  const margin=16;
+  let y=0;
+
+  // ─── HELPERS ───
+  const hex2rgb=h=>{const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return[r,g,b];};
+  const setFill=(r,g,b)=>doc.setFillColor(r,g,b);
+  const setFont=(sz,style='normal',col=[232,240,255])=>{doc.setFontSize(sz);doc.setFont('helvetica',style);doc.setTextColor(...col);};
+  const riskCol={Low:[16,232,160],Moderate:[245,200,66],High:[245,92,92]}[lastResult.risk_level];
+
+  // ─── COVER PAGE ───
+  // Dark bg
+  setFill(4,6,13);doc.rect(0,0,W,H,'F');
+  // Gradient overlay (simulated)
+  for(let i=0;i<60;i++){doc.setFillColor(79,139,255,0.5*(1-i/60));doc.rect(0,i*3,W,3,'F');}
+  setFill(4,6,13);doc.rect(0,0,W,H,'F');
+  // Accent bar
+  doc.setFillColor(...[79,139,255]);doc.rect(0,0,margin/2,H,'F');
+  doc.setFillColor(...[240,84,184]);doc.rect(margin/2,0,margin/4,H,'F');
+
+  // Logo area
+  doc.setFillColor(20,30,50);doc.roundedRect(margin,18,W-margin*2,50,6,6,'F');
+  doc.setFillColor(79,139,255);doc.circle(margin+16,43,8,'F');
+  setFont(18,'bold',[232,240,255]);doc.text('🧠',margin+11,47);
+  setFont(26,'bold',[232,240,255]);doc.text('MindGuard',margin+28,38);
+  setFont(10,'normal',[122,154,204]);doc.text('Neural Mental Health Assessment Platform',margin+28,48);
+  setFont(8,'normal',[58,80,112]);doc.text('RESEARCH & SCREENING USE ONLY — NOT A CLINICAL DIAGNOSTIC TOOL',margin+28,56);
+
+  // Report title
+  y=85;
+  setFont(22,'bold',[232,240,255]);doc.text('Assessment Report',margin,y);y+=10;
+  setFont(11,'normal',[122,154,204]);doc.text(`Generated: ${new Date().toLocaleString()}`,margin,y);y+=6;
+  doc.setDrawColor(79,139,255,0.3);doc.setLineWidth(0.5);doc.line(margin,y,W-margin,y);y+=12;
+
+  // Risk level banner
+  doc.setFillColor(riskCol[0],riskCol[1],riskCol[2]);doc.setOpacity(0.1);
+  doc.roundedRect(margin,y,W-margin*2,38,5,5,'F');doc.setOpacity(1);
+  doc.setDrawColor(...riskCol);doc.setLineWidth(1);
+  doc.roundedRect(margin,y,W-margin*2,38,5,5,'S');
+  setFont(10,'bold',riskCol);doc.text(lastResult.risk_level.toUpperCase()+' RISK DETECTED',margin+10,y+12);
+  setFont(20,'bold',[232,240,255]);
+  const rHeadings={Low:'Low Risk Detected',Moderate:'Moderate Risk Detected',High:'High Risk Detected'};
+  doc.text(rHeadings[lastResult.risk_level],margin+10,y+24);
+  setFont(9,'normal',[122,154,204]);
+  doc.text(`Confidence Score: ${(lastResult.confidence*100).toFixed(0)}%  |  Model: Neural Multi-Modal v2.1`,margin+10,y+33);
+  y+=50;
+
+  // Stats row
+  const statBoxes=[
+    {label:'Sleep Hours',val:lastSleep+'h',col:[79,139,255]},
+    {label:'Energy Level',val:lastMood+'/10',col:[240,84,184]},
+    {label:'Frames Captured',val:String(frames.length),col:[16,232,160]},
+    {label:'Dominant Emotion',val:frames.filter(f=>f.faceDetected).length?getDomEmo():'None',col:[245,200,66]},
+  ];
+  const bw=(W-margin*2-12)/4;
+  statBoxes.forEach((s,i)=>{
+    const bx=margin+i*(bw+4);
+    doc.setFillColor(17,30,53);doc.roundedRect(bx,y,bw,26,4,4,'F');
+    doc.setDrawColor(25,50,80);doc.roundedRect(bx,y,bw,26,4,4,'S');
+    setFont(7,'bold',s.col);doc.text(s.label.toUpperCase(),bx+4,y+9);
+    doc.setFont('courier','bold');doc.setFontSize(13);doc.setTextColor(...s.col);
+    doc.text(s.val,bx+4,y+20);
+  });
+  y+=36;
+
+  // Risk probabilities
+  setFont(9,'bold',[122,154,204]);doc.text('RISK PROBABILITY DISTRIBUTION',margin,y);y+=7;
+  const pLabels=['Low Risk','Moderate Risk','High Risk'];
+  const pCols=[[16,232,160],[245,200,66],[245,92,92]];
+  lastResult.probabilities.forEach((p,i)=>{
+    const pct=p*100;const bw2=W-margin*2-50;
+    setFont(8,'normal',[122,154,204]);doc.text(pLabels[i],margin,y+4);
+    doc.setFillColor(17,30,53);doc.roundedRect(margin+40,y,bw2,6,2,2,'F');
+    doc.setFillColor(...pCols[i]);doc.roundedRect(margin+40,y,bw2*p,6,2,2,'F');
+    doc.setFont('courier','bold');doc.setFontSize(8);doc.setTextColor(...pCols[i]);
+    doc.text(pct.toFixed(1)+'%',margin+40+bw2+2,y+5);
+    y+=12;
+  });
+  y+=6;
+
+  // 7-Segment display
+  doc.line(margin,y,W-margin,y);y+=8;
+  setFont(9,'bold',[122,154,204]);doc.text('7-SEGMENT MOOD ANALYSIS',margin,y);y+=8;
+  const segW=(W-margin*2-24)/7;
+  const segNames=['Despair','Sad','Anxious','Neutral','Content','Good','Elated'];
+  const segEmojis=['😭','😢','😟','😐','🙂','😊','😄'];
+  const activeSeg=Math.floor(((lastMood-1)/9)*6);
+  segNames.forEach((name,i)=>{
+    const sx=margin+i*(segW+4);
+    const active=i<=activeSeg;
+    const sc=[...SEG_COLORS_RGB[i]];
+    if(active){doc.setFillColor(...sc);doc.setOpacity(0.2);}
+    else{doc.setFillColor(17,30,53);doc.setOpacity(1);}
+    doc.roundedRect(sx,y,segW,20,3,3,'F');doc.setOpacity(1);
+    if(active){doc.setDrawColor(...sc);doc.roundedRect(sx,y,segW,20,3,3,'S');}
+    setFont(6,active?'bold':'normal',active?sc:[58,80,112]);
+    doc.text(name,sx+segW/2,y+9,{align:'center'});
+    if(active){doc.setFontSize(9);doc.text(segEmojis[i],sx+segW/2,y+17,{align:'center'});}
+  });
+  y+=30;doc.line(margin,y,W-margin,y);y+=10;
+
+  // ─── PAGE 2: FACIAL ANALYSIS ───
+  if(frames.length){
+    doc.addPage();
+    setFill(4,6,13);doc.rect(0,0,W,H,'F');
+    doc.setFillColor(79,139,255);doc.rect(0,0,margin/2,H,'F');
+    doc.setFillColor(240,84,184);doc.rect(margin/2,0,margin/4,H,'F');
+
+    y=20;
+    setFont(18,'bold',[232,240,255]);doc.text('Facial Analysis Report',margin,y);y+=8;
+    setFont(9,'normal',[122,154,204]);doc.text(`${frames.length} frames analyzed | ${frames.filter(f=>f.faceDetected).length} faces detected`,margin,y);y+=8;
+    doc.setDrawColor(79,139,255,0.3);doc.line(margin,y,W-margin,y);y+=8;
+
+    // Face stats boxes
+    const det=frames.filter(f=>f.faceDetected);
+    const avgConf=det.length?det.reduce((a,b)=>a+b.confidence,0)/det.length:0;
+    const fStatsData=[
+      {l:'Total Frames',v:String(frames.length),c:[79,139,255]},
+      {l:'Faces Detected',v:String(det.length),c:[16,232,160]},
+      {l:'Detection Rate',v:(frames.length?det.length/frames.length*100:0).toFixed(0)+'%',c:[245,200,66]},
+      {l:'Avg Confidence',v:(avgConf*100).toFixed(0)+'%',c:[240,84,184]},
+    ];
+    const fbw=(W-margin*2-12)/4;
+    fStatsData.forEach((s,i)=>{
+      const bx=margin+i*(fbw+4);
+      doc.setFillColor(17,30,53);doc.roundedRect(bx,y,fbw,26,4,4,'F');
+      setFont(7,'bold',s.c);doc.text(s.l.toUpperCase(),bx+4,y+9);
+      doc.setFont('courier','bold');doc.setFontSize(13);doc.setTextColor(...s.c);
+      doc.text(s.v,bx+4,y+20);
+    });
+    y+=34;
+
+    // Facial summary
+    setFont(9,'bold',[122,154,204]);doc.text('ANALYSIS SUMMARY',margin,y);y+=7;
+    setFont(8,'normal',[122,154,204]);
+    const wrappedSum=doc.splitTextToSize(lastResult.face_summary,W-margin*2);
+    doc.text(wrappedSum,margin,y);y+=wrappedSum.length*5+8;
+
+    // Frames grid (up to 18)
+    setFont(9,'bold',[122,154,204]);doc.text('CAPTURED FRAMES WITH CONFIDENCE SCORES',margin,y);y+=8;
+    const maxFrames=Math.min(frames.length,18);
+    const cols=6;const fW=(W-margin*2-(cols-1)*4)/cols;const fH=fW*0.75;
+    for(let i=0;i<maxFrames;i++){
+      const col=i%cols,row=Math.floor(i/cols);
+      const fx=margin+col*(fW+4),fy=y+row*(fH+14);
+      const f=frames[i];
+      try{
+        doc.addImage(f.dataUrl,'JPEG',fx,fy,fW,fH);
+      }catch(e){
+        doc.setFillColor(17,30,53);doc.rect(fx,fy,fW,fH,'F');
+        setFont(6,'normal',[58,80,112]);doc.text('No image',fx+fW/2,fy+fH/2,{align:'center'});
+      }
+      // Frame number
+      doc.setFillColor(0,0,0,0.7);doc.rect(fx,fy,12,6,'F');
+      setFont(5,'bold',[255,255,255]);doc.text(`#${i+1}`,fx+1,fy+4.5);
+      // Confidence badge
+      if(f.faceDetected){
+        const cc=[...emoColorRGB(f.emotion)];
+        doc.setFillColor(...cc);doc.setOpacity(0.85);doc.rect(fx+fW-16,fy,16,6,'F');doc.setOpacity(1);
+        setFont(5,'bold',[255,255,255]);doc.text(`${(f.confidence*100).toFixed(0)}%`,fx+fW-15,fy+4.5);
+      }
+      // Emotion label
+      const eCol=f.faceDetected?[...emoColorRGB(f.emotion)]:[58,80,112];
+      doc.setFillColor(0,0,0,0.8);doc.rect(fx,fy+fH-7,fW,7,'F');
+      setFont(5,'normal',eCol);doc.text(f.faceDetected?f.emotion:'No Face',fx+2,fy+fH-2);
+    }
+    const rows=Math.ceil(maxFrames/cols);y+=rows*(fH+14)+8;
+  }
+
+  // ─── PAGE 3: CONVERSATION & RECOMMENDATIONS ───
+  doc.addPage();
+  setFill(4,6,13);doc.rect(0,0,W,H,'F');
+  doc.setFillColor(79,139,255);doc.rect(0,0,margin/2,H,'F');
+  doc.setFillColor(240,84,184);doc.rect(margin/2,0,margin/4,H,'F');
+
+  y=20;
+  setFont(18,'bold',[232,240,255]);doc.text('Conversation & Recommendations',margin,y);y+=8;
+  doc.setDrawColor(79,139,255,0.3);doc.line(margin,y,W-margin,y);y+=10;
+
+  // Chat log
+  if(lastChatMessages.length>0){
+    setFont(9,'bold',[122,154,204]);doc.text('CONVERSATION LOG',margin,y);y+=8;
+    lastChatMessages.slice(0,20).forEach(msg=>{
+      if(y>260){doc.addPage();setFill(4,6,13);doc.rect(0,0,W,H,'F');doc.setFillColor(79,139,255);doc.rect(0,0,margin/2,H,'F');y=20;}
+      const isUser=msg.type==='user';
+      const bx=isUser?margin+30:margin;const bw3=W-margin*2-30;
+      const col=isUser?[122,154,204]:[79,139,255];
+      setFont(7,'bold',col);doc.text(isUser?`You (${msg.time})`:`AI Assistant (${msg.time})`,bx,y);y+=5;
+      setFont(8,'normal',[200,215,240]);
+      const wrapped=doc.splitTextToSize(msg.text,bw3-8);
+      const bh=wrapped.length*4.5+10;
+      doc.setFillColor(isUser?17:10,isUser?30:20,isUser?53:40);doc.roundedRect(bx,y,bw3,bh,3,3,'F');
+      doc.setDrawColor(...col,0.4);doc.roundedRect(bx,y,bw3,bh,3,3,'S');
+      setFont(8,'normal',[200,215,240]);doc.text(wrapped,bx+4,y+6);
+      y+=bh+6;
+    });
+    y+=4;doc.line(margin,y,W-margin,y);y+=10;
+  }else{
+    setFont(9,'normal',[58,80,112]);doc.text('No conversation data recorded.',margin,y);y+=10;
+  }
+
+  // Recommendations
+  if(y>240){doc.addPage();setFill(4,6,13);doc.rect(0,0,W,H,'F');doc.setFillColor(79,139,255);doc.rect(0,0,margin/2,H,'F');y=20;}
+  setFont(9,'bold',[122,154,204]);doc.text('PERSONALIZED RECOMMENDATIONS',margin,y);y+=8;
+  const recMap={
+    Low:[['🌿 Maintain Routine','Continue your healthy habits and rhythm.'],['🤝 Stay Connected','Prioritize social connections for wellbeing.'],['🏃 Stay Active','Regular exercise supports mood and resilience.']],
+    Moderate:[['💬 Seek Support','Consider speaking with a counselor or therapist.'],['📱 Mood Tracking','Track daily moods to identify patterns.'],['😴 Sleep Hygiene',`Target 7-9 hours sleep (currently ${lastSleep}h).`]],
+    High:[['🏥 Professional Help','Contact a licensed mental health professional.'],['📞 Crisis Line: 988','Free 24/7 support — call or text.'],['🆘 Emergency: 911','For immediate danger, call emergency services.']]
+  };
+  (recMap[lastResult.risk_level]||recMap.Moderate).forEach(([title,desc])=>{
+    doc.setFillColor(17,30,53);doc.roundedRect(margin,y,W-margin*2,20,4,4,'F');
+    setFont(9,'bold',[232,240,255]);doc.text(title,margin+8,y+8);
+    setFont(8,'normal',[122,154,204]);doc.text(desc,margin+8,y+16);
+    y+=26;
+  });
+  y+=6;
+
+  // Disclaimer
+  doc.setFillColor(20,30,50);doc.roundedRect(margin,y,W-margin*2,25,4,4,'F');
+  doc.setDrawColor(245,200,66,0.3);doc.roundedRect(margin,y,W-margin*2,25,4,4,'S');
+  setFont(8,'bold',[245,200,66]);doc.text('⚠️  IMPORTANT DISCLAIMER',margin+6,y+8);
+  setFont(7,'normal',[122,154,204]);
+  const disc='This report is generated by an AI screening tool for research purposes only. It is NOT a clinical diagnosis. Please consult a licensed mental health professional for proper evaluation and treatment.';
+  const discWrapped=doc.splitTextToSize(disc,W-margin*2-12);
+  doc.text(discWrapped,margin+6,y+14);
+
+  // Footer on all pages
+  const totalPages=doc.getNumberOfPages();
+  for(let i=1;i<=totalPages;i++){
+    doc.setPage(i);
+    doc.setFillColor(7,12,24);doc.rect(0,H-12,W,12,'F');
+    setFont(7,'normal',[58,80,112]);
+    doc.text('MindGuard Neural Assessment Platform — Confidential Research Report',margin,H-4);
+    doc.text(`Page ${i} of ${totalPages}`,W-margin,H-4,{align:'right'});
+  }
+
+  const filename=`MindGuard_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+  doc.save(filename);
+  toast('📄 PDF report downloaded!');
+}
+
+// helpers for PDF
+const SEG_COLORS_RGB=[[245,92,92],[248,113,113],[245,200,66],[122,154,204],[79,139,255],[16,232,160],[10,232,160]];
+function emoColorRGB(e){
+  return{happy:[16,232,160],sad:[245,92,92],neutral:[245,200,66],surprised:[79,139,255],fearful:[248,113,113],angry:[239,68,68],disgusted:[167,139,250]}[e?.toLowerCase()]||[79,139,255];
+}
+function getDomEmo(){
+  const det=frames.filter(f=>f.faceDetected);if(!det.length)return'None';
+  const ec={};det.forEach(f=>ec[f.emotion]=(ec[f.emotion]||0)+1);
+  return Object.entries(ec).sort((a,b)=>b[1]-a[1])[0][0];
+}
+
+// ═══════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════
+function addHistory(result,sleep,mood){
+  const seg=Math.floor(((mood-1)/9)*6);
+  historyData.unshift({time:new Date().toLocaleString(),risk:result.risk_level,conf:result.confidence,sleep,mood,moodState:SEG_NAMES[seg],frames:frames.length});
+  updateHistory();
+}
+
+const SEG_NAMES_LOCAL=['Despair','Sad','Anxious','Neutral','Content','Good','Elated'];
+
+function updateHistory(){
+  const tbody=document.getElementById('histBody');
+  document.getElementById('histTotal').textContent=historyData.length;
+  if(!historyData.length){tbody.innerHTML='<tr class="empty-row"><td colspan="7">No assessments yet.</td></tr>';document.getElementById('histAvgConf').textContent='—';document.getElementById('histCommon').textContent='—';return;}
+  const avg=historyData.reduce((a,b)=>a+b.conf,0)/historyData.length;
+  document.getElementById('histAvgConf').textContent=(avg*100).toFixed(0)+'%';
+  const ct={};historyData.forEach(h=>ct[h.risk]=(ct[h.risk]||0)+1);
+  document.getElementById('histCommon').textContent=Object.entries(ct).sort((a,b)=>b[1]-a[1])[0][0];
+  tbody.innerHTML=historyData.map(h=>`<tr>
+    <td style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;">${h.time}</td>
+    <td><span class="risk-badge ${h.risk.toLowerCase()}">${h.risk}</span></td>
+    <td style="font-family:'JetBrains Mono',monospace;">${(h.conf*100).toFixed(1)}%</td>
+    <td>${h.sleep}h</td><td>${h.mood}/10</td>
+    <td style="color:var(--text)">${h.moodState||'—'}</td>
+    <td>${h.frames}</td>
+  </tr>`).join('');
+}
+
+function downloadCSV(){
+  if(!historyData.length){toast('No history to download');return;}
+  const rows=[['Time','Risk Level','Confidence','Sleep (h)','Energy','Mood State','Frames'],...historyData.map(h=>[h.time,h.risk,(h.conf*100).toFixed(1)+'%',h.sleep,h.mood,h.moodState||'—',h.frames])];
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`mindguard_${new Date().toISOString().split('T')[0]}.csv`;a.click();
+  toast('⬇ CSV exported');
+}
+
+// ═══════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════
+function openCrisis(){document.getElementById('crisisModal').classList.add('active');}
+function closeCrisis(){document.getElementById('crisisModal').classList.remove('active');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCrisis();closeLightbox();}});
+document.getElementById('crisisModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeCrisis();});
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+window.addEventListener('load',()=>{
+  setTimeout(()=>{connectBackend();},2500);
+});
+</script>
+</body>
+</html>

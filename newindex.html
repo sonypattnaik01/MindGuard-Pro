@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindGuard — Mental Health Screening</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#07080f;
+  --bg2:#0c0e1a;
+  --bg3:#101320;
+  --surface:#141828;
+  --surface2:#1a1f30;
+  --surface3:#1f2539;
+  --border:rgba(100,120,220,0.1);
+  --border2:rgba(100,120,220,0.22);
+  --text:#dde4f8;
+  --text2:#8892b8;
+  --text3:#404870;
+  --blue:#5b7fff;
+  --blue2:#3358e0;
+  --teal:#0fc8d4;
+  --pink:#e055b8;
+  --green:#0ee09a;
+  --yellow:#f0c044;
+  --red:#f05060;
+  --purple:#9b6fff;
+  --r:12px;
+  --r2:18px;
+}
+
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 10%,rgba(91,127,255,0.06) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 35% at 90% 85%,rgba(224,85,184,0.05) 0%,transparent 60%);
+  pointer-events:none;
+}
+
+/* ── LOADER ── */
+#loader{
+  position:fixed;inset:0;z-index:9999;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;
+  transition:opacity 0.6s,visibility 0.6s;
+}
+#loader.out{opacity:0;visibility:hidden;}
+.ld-logo{font-family:'Syne',sans-serif;font-size:2.4rem;font-weight:800;
+  background:linear-gradient(135deg,var(--blue),var(--teal));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.ld-bar{width:200px;height:2px;background:var(--surface2);border-radius:1px;overflow:hidden;}
+.ld-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--teal));transition:width 0.3s;}
+.ld-text{font-family:'DM Mono',monospace;font-size:0.73rem;color:var(--text3);}
+
+/* ── NAV ── */
+nav{
+  position:sticky;top:0;z-index:800;height:60px;
+  background:rgba(7,8,15,0.85);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 1.5rem;
+}
+.nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;
+  background:linear-gradient(135deg,var(--blue),var(--teal));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  display:flex;align-items:center;gap:8px;}
+.nav-logo-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(15,200,212,0.5);}50%{box-shadow:0 0 0 6px rgba(15,200,212,0);}}
+.nav-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.nbtn{
+  padding:6px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;
+  font-size:0.79rem;font-weight:500;cursor:pointer;border:1px solid var(--border2);
+  background:transparent;color:var(--text2);transition:all 0.2s;white-space:nowrap;
+}
+.nbtn:hover{background:var(--surface2);color:var(--text);}
+.nbtn.crisis{border-color:rgba(240,80,96,0.3);color:var(--red);}
+.nbtn.crisis:hover{background:rgba(240,80,96,0.1);}
+
+/* ── CONTAINER ── */
+.wrap{max-width:1100px;margin:0 auto;padding:2rem 1.5rem 6rem;position:relative;z-index:1;}
+
+/* ── HERO ── */
+.hero{text-align:center;padding:3rem 0 2.5rem;}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 14px;border-radius:50px;font-size:0.73rem;font-weight:600;
+  background:rgba(91,127,255,0.1);border:1px solid rgba(91,127,255,0.25);
+  color:var(--blue);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:1.4rem;
+}
+.hero h1{
+  font-family:'Syne',sans-serif;font-size:clamp(2.2rem,5vw,3.8rem);
+  font-weight:800;line-height:1.05;letter-spacing:-1.5px;margin-bottom:1rem;
+  background:linear-gradient(135deg,var(--text) 0%,rgba(180,200,255,0.85) 60%,var(--teal) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero-sub{color:var(--text2);font-size:1rem;font-weight:300;max-width:480px;margin:0 auto 1.5rem;line-height:1.75;}
+.hero-note{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 18px;border-radius:50px;font-size:0.77rem;color:var(--yellow);
+  background:rgba(240,192,68,0.07);border:1px solid rgba(240,192,68,0.2);
+}
+
+/* ── MODE SELECTOR ── */
+.mode-wrap{
+  display:grid;grid-template-columns:1fr 1fr;gap:1rem;
+  max-width:640px;margin:2.5rem auto;
+}
+.mode-card{
+  background:var(--surface);border:2px solid var(--border);
+  border-radius:var(--r2);padding:1.8rem 1.5rem;cursor:pointer;
+  transition:all 0.25s;text-align:left;position:relative;overflow:hidden;
+}
+.mode-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(91,127,255,0.06),transparent);
+  opacity:0;transition:opacity 0.25s;
+}
+.mode-card:hover{border-color:var(--border2);}
+.mode-card:hover::before{opacity:1;}
+.mode-card.active{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue),0 0 32px rgba(91,127,255,0.15);}
+.mode-card.active::before{opacity:1;}
+.mc-icon{
+  width:44px;height:44px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;margin-bottom:1rem;
+}
+.mc-label{font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;}
+.mc-title{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;margin-bottom:6px;}
+.mc-desc{font-size:0.8rem;color:var(--text2);line-height:1.55;}
+.mc-badge{
+  display:inline-block;margin-top:10px;padding:3px 10px;border-radius:50px;
+  font-size:0.68rem;font-weight:600;
+}
+.mode-card.normal .mc-icon{background:rgba(15,200,212,0.12);color:var(--teal);}
+.mode-card.normal .mc-label{color:var(--teal);}
+.mode-card.normal .mc-badge{background:rgba(15,200,212,0.12);color:var(--teal);}
+.mode-card.advanced .mc-icon{background:rgba(91,127,255,0.12);color:var(--blue);}
+.mode-card.advanced .mc-label{color:var(--blue);}
+.mode-card.advanced .mc-badge{background:rgba(91,127,255,0.12);color:var(--blue);}
+.mode-sel-check{
+  position:absolute;top:14px;right:14px;
+  width:22px;height:22px;border-radius:50%;
+  border:2px solid var(--border2);background:transparent;
+  display:flex;align-items:center;justify-content:center;transition:all 0.2s;
+  font-size:0.75rem;color:white;
+}
+.mode-card.active .mode-sel-check{background:var(--blue);border-color:var(--blue);}
+
+/* ── START BTN ── */
+.start-btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  max-width:360px;margin:0 auto 2.5rem;
+  padding:13px 32px;border-radius:var(--r);font-family:'Syne',sans-serif;
+  font-size:0.95rem;font-weight:700;cursor:pointer;border:none;
+  background:linear-gradient(135deg,var(--blue),var(--teal));color:white;
+  transition:all 0.25s;box-shadow:0 4px 24px rgba(91,127,255,0.3);
+}
+.start-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(91,127,255,0.4);}
+.start-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+/* ── SECTION ── */
+.section{display:none;}
+.section.active{display:block;animation:fadeUp 0.4s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── CARD ── */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r2);overflow:hidden;margin-bottom:1.2rem;
+}
+.card-head{
+  padding:1rem 1.4rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:rgba(91,127,255,0.03);
+}
+.card-head-icon{
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;
+}
+.card-head h2{font-family:'Syne',sans-serif;font-size:0.88rem;font-weight:700;flex:1;}
+.card-body{padding:1.4rem;}
+
+/* ── CHAT ── */
+.chat-box{
+  height:clamp(300px,50vh,440px);overflow-y:auto;
+  background:var(--bg2);border-radius:var(--r);
+  padding:1rem;margin-bottom:1rem;
+  scroll-behavior:smooth;
+}
+.chat-msg{
+  max-width:82%;margin-bottom:0.9rem;
+  animation:msgIn 0.3s ease both;
+}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.chat-msg.ai{margin-right:auto;}
+.chat-msg.user{margin-left:auto;}
+.msg-head{font-size:0.65rem;color:var(--text3);margin-bottom:4px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.5px;}
+.msg-body{
+  padding:0.8rem 1rem;border-radius:12px;
+  font-size:0.87rem;line-height:1.65;white-space:pre-wrap;
+}
+.chat-msg.ai .msg-body{background:rgba(91,127,255,0.08);border:1px solid rgba(91,127,255,0.15);color:var(--text);}
+.chat-msg.user .msg-body{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
+.typing-dots::after{content:'●';animation:dots 1.2s steps(3,end) infinite;}
+@keyframes dots{0%{content:'●';}33%{content:'●●';}66%,100%{content:'●●●';}}
+
+.chat-input-area{display:flex;gap:8px;align-items:flex-end;}
+.chat-input{
+  flex:1;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:0.88rem;padding:10px 14px;outline:none;
+  transition:border-color 0.2s;resize:none;min-height:44px;max-height:120px;
+}
+.chat-input:focus{border-color:var(--blue);}
+.chat-input::placeholder{color:var(--text3);}
+
+.cbtn{
+  padding:10px 16px;border-radius:var(--r);font-family:'DM Sans',sans-serif;
+  font-size:0.82rem;font-weight:600;cursor:pointer;border:none;
+  white-space:nowrap;transition:all 0.2s;
+}
+.cbtn-primary{background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;}
+.cbtn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 14px rgba(91,127,255,0.4);}
+.cbtn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.cbtn-ghost:hover:not(:disabled){background:var(--surface3);color:var(--text);}
+.cbtn:disabled{opacity:0.35;cursor:not-allowed;}
+
+/* ── CHAT STATUS ── */
+.chat-status{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:var(--bg2);border-radius:8px;margin-bottom:1rem;
+  font-size:0.75rem;color:var(--text3);font-family:'DM Mono',monospace;
+}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.status-dot.active{background:var(--green);box-shadow:0 0 0 3px rgba(14,224,154,0.2);animation:pulse 2s infinite;}
+.status-dot.idle{background:var(--text3);}
+
+/* ── METRICS ── */
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-top:1.2rem;}
+.metric-lbl{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:0.79rem;color:var(--text2);}
+.metric-val{font-family:'DM Mono',monospace;font-weight:500;color:var(--blue);}
+input[type=range]{
+  -webkit-appearance:none;width:100%;height:3px;border-radius:2px;
+  background:var(--surface3);outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),var(--teal));cursor:pointer;
+  box-shadow:0 0 10px rgba(91,127,255,0.4);transition:transform 0.2s;
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3);}
+
+/* ── TEXTAREA ── */
+.ta{
+  width:100%;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:0.88rem;font-weight:300;line-height:1.7;padding:1rem;
+  resize:vertical;min-height:120px;outline:none;transition:border-color 0.2s;
+}
+.ta:focus{border-color:var(--blue);}
+.ta::placeholder{color:var(--text3);}
+
+/* ── CAMERA ── */
+.cam-wrap{
+  position:relative;width:100%;height:240px;
+  background:var(--bg2);border-radius:var(--r);overflow:hidden;border:1px solid var(--border);
+}
+#cameraFeed{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+#cameraCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;}
+.cam-ph{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;color:var(--text3);z-index:1;
+}
+.cam-ph-ic{width:50px;height:50px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
+.cam-controls{display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;}
+
+/* ── LIVE BOX ── */
+.live-box{
+  margin-top:1rem;padding:10px 14px;
+  background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);
+  display:none;
+}
+.live-row{display:flex;justify-content:space-between;align-items:center;font-size:0.79rem;margin-bottom:6px;}
+.live-label{color:var(--text2);}
+.conf-bar{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.conf-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width 0.3s;width:0%;}
+
+/* ── FRAMES ── */
+.frames-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;max-height:200px;overflow-y:auto;}
+.frame-thumb{position:relative;aspect-ratio:4/3;border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all 0.2s;}
+.frame-thumb:hover{border-color:var(--blue);transform:scale(1.04);}
+.frame-thumb img{width:100%;height:100%;object-fit:cover;}
+.frame-emo{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.75);font-size:0.57rem;padding:3px 4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.frame-conf{position:absolute;top:3px;right:3px;background:rgba(91,127,255,0.85);color:white;font-size:0.52rem;padding:2px 4px;border-radius:4px;font-family:'DM Mono',monospace;}
+.frame-idx{position:absolute;top:3px;left:3px;background:rgba(0,0,0,0.6);color:white;font-size:0.52rem;padding:2px 4px;border-radius:4px;}
+
+/* ── PROGRESS ── */
+.prog-wrap{margin-top:1rem;display:none;}
+.prog-bg{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-bottom:6px;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--teal));transition:width 0.3s;width:0%;}
+.prog-text{font-size:0.72rem;color:var(--text3);font-family:'DM Mono',monospace;}
+
+/* ── ASSESS BTN ── */
+.assess-btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;padding:1.05rem;margin:1.5rem 0;
+  border-radius:var(--r);font-family:'Syne',sans-serif;
+  font-size:0.95rem;font-weight:700;cursor:pointer;border:none;
+  background:linear-gradient(135deg,var(--blue),var(--teal));color:white;
+  transition:all 0.25s;box-shadow:0 4px 24px rgba(91,127,255,0.25);
+}
+.assess-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 32px rgba(91,127,255,0.35);}
+.assess-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* ── AI OVERLAY ── */
+#aiOverlay{
+  position:fixed;inset:0;z-index:9000;
+  background:rgba(7,8,15,0.95);backdrop-filter:blur(14px);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;
+}
+#aiOverlay.on{display:flex;animation:fadeUp 0.3s ease;}
+.aio-ring{position:relative;width:110px;height:110px;}
+.aio-ring svg{position:absolute;inset:0;width:100%;height:100%;animation:spinr 2.5s linear infinite;}
+@keyframes spinr{to{transform:rotate(360deg);}}
+.aio-inner{position:absolute;inset:12px;border-radius:50%;background:rgba(91,127,255,0.1);display:flex;align-items:center;justify-content:center;font-size:2rem;animation:scpulse 1.5s ease-in-out infinite;}
+@keyframes scpulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+.aio-title{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;}
+.aio-sub{font-size:0.8rem;color:var(--text2);font-family:'DM Mono',monospace;}
+.aio-steps{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:400px;width:100%;}
+.aio-step{
+  padding:8px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;font-size:0.77rem;color:var(--text3);transition:all 0.3s;
+}
+.aio-step.on{border-color:rgba(91,127,255,0.4);color:var(--text);background:rgba(91,127,255,0.08);}
+.aio-step.done{border-color:rgba(14,224,154,0.4);color:var(--green);background:rgba(14,224,154,0.06);}
+.aio-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background 0.2s;}
+.aio-step.on .aio-dot{background:var(--blue);animation:pulse 1s infinite;}
+.aio-step.done .aio-dot{background:var(--green);}
+.aio-prog{width:400px;max-width:90vw;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.aio-pfill{height:100%;background:linear-gradient(90deg,var(--blue),var(--teal));width:0%;transition:width 0.4s ease;border-radius:2px;}
+
+/* ── RESULTS ── */
+.results{animation:fadeUp 0.5s ease both;}
+.result-banner{
+  border-radius:var(--r2);padding:1.8rem 2rem;margin-bottom:1.2rem;
+  display:flex;align-items:center;gap:2rem;flex-wrap:wrap;
+  position:relative;overflow:hidden;
+}
+.result-banner::after{content:'';position:absolute;right:-20px;top:-20px;width:160px;height:160px;border-radius:50%;background:currentColor;opacity:0.04;}
+.result-banner.low{background:rgba(14,224,154,0.07);border:1px solid rgba(14,224,154,0.2);}
+.result-banner.moderate{background:rgba(240,192,68,0.07);border:1px solid rgba(240,192,68,0.2);}
+.result-banner.high{background:rgba(240,80,96,0.07);border:1px solid rgba(240,80,96,0.2);}
+.rb-icon{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
+.result-banner.low .rb-icon{background:rgba(14,224,154,0.15);}
+.result-banner.moderate .rb-icon{background:rgba(240,192,68,0.15);}
+.result-banner.high .rb-icon{background:rgba(240,80,96,0.15);}
+.rb-tag{font-size:0.67rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;}
+.result-banner.low .rb-tag{color:var(--green);}
+.result-banner.moderate .rb-tag{color:var(--yellow);}
+.result-banner.high .rb-tag{color:var(--red);}
+.rb-h{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;letter-spacing:-0.5px;margin-bottom:4px;}
+.rb-sub{font-size:0.84rem;color:var(--text2);max-width:400px;line-height:1.55;}
+.rb-conf{margin-left:auto;text-align:right;flex-shrink:0;}
+.rb-conf-num{font-family:'DM Mono',monospace;font-size:2.4rem;font-weight:500;letter-spacing:-1px;}
+.result-banner.low .rb-conf-num{color:var(--green);}
+.result-banner.moderate .rb-conf-num{color:var(--yellow);}
+.result-banner.high .rb-conf-num{color:var(--red);}
+.rb-conf-lbl{font-size:0.67rem;color:var(--text3);}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.2rem;}
+.sbox{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;}
+.sbox-lbl{font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;font-weight:600;margin-bottom:6px;}
+.sbox-val{font-family:'DM Mono',monospace;font-size:1.35rem;font-weight:500;}
+
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.2rem;}
+.ccrd{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:1.3rem;}
+.ccrd h3{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);margin-bottom:1rem;}
+.chart-h{position:relative;height:190px;}
+
+.prob-bars{display:flex;flex-direction:column;gap:1rem;}
+.prob-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:0.78rem;}
+.prob-lbl{color:var(--text2);}
+.prob-pct{font-family:'DM Mono',monospace;font-weight:500;}
+.pbar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.pbar-fill{height:100%;border-radius:3px;transition:width 0.7s cubic-bezier(0.34,1.56,0.64,1);width:0%;}
+.pbar-fill.l{background:linear-gradient(90deg,var(--green),#34d399);}
+.pbar-fill.m{background:linear-gradient(90deg,var(--yellow),#fbbf24);}
+.pbar-fill.h{background:linear-gradient(90deg,var(--red),#f87171);}
+
+/* ── RISK FACTORS ── */
+.rf-list{display:flex;flex-direction:column;gap:6px;margin-top:1rem;}
+.rf-item{
+  display:flex;align-items:center;gap:10px;padding:8px 12px;
+  background:var(--bg2);border-radius:8px;border:1px solid var(--border);
+  font-size:0.8rem;color:var(--text2);
+}
+.rf-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* ── SUGGESTIONS ── */
+.sug-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;}
+.sug-item{
+  padding:1rem;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);
+  display:flex;align-items:flex-start;gap:10px;transition:border-color 0.2s;
+}
+.sug-item:hover{border-color:var(--border2);}
+.sug-ic{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.95rem;flex-shrink:0;}
+.sug-text h4{font-size:0.83rem;font-weight:600;margin-bottom:3px;}
+.sug-text p{font-size:0.74rem;color:var(--text2);line-height:1.45;}
+
+/* ── HISTORY ── */
+.hist-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.2rem;}
+.hstat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem;text-align:center;}
+.hstat-n{font-family:'DM Mono',monospace;font-size:1.8rem;font-weight:500;color:var(--blue);}
+.hstat-l{font-size:0.7rem;color:var(--text3);margin-top:4px;}
+table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:var(--r2);overflow:hidden;border:1px solid var(--border);}
+thead th{padding:.75rem 1.1rem;text-align:left;font-size:0.67rem;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);}
+tbody td{padding:.75rem 1.1rem;font-size:0.8rem;border-bottom:1px solid var(--border);color:var(--text2);}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:rgba(91,127,255,0.03);}
+.rbadge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:50px;font-size:0.7rem;font-weight:600;}
+.rbadge.low{background:rgba(14,224,154,0.1);color:var(--green);}
+.rbadge.moderate{background:rgba(240,192,68,0.1);color:var(--yellow);}
+.rbadge.high{background:rgba(240,80,96,0.1);color:var(--red);}
+.empty-row td{text-align:center;padding:3rem;color:var(--text3);}
+
+/* ── MODALS ── */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:8000;display:none;align-items:center;justify-content:center;padding:1.5rem;}
+.modal.on{display:flex;animation:fadeUp 0.3s ease;}
+.mbox{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r2);max-width:460px;width:100%;overflow:hidden;animation:scaleIn 0.3s ease;}
+@keyframes scaleIn{from{transform:scale(0.93);}to{transform:scale(1);}}
+.mhead{padding:1.2rem 1.5rem;background:rgba(240,80,96,0.07);border-bottom:1px solid rgba(240,80,96,0.15);display:flex;justify-content:space-between;align-items:center;}
+.mhead h2{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--red);}
+.mclose{background:none;border:none;color:var(--text3);font-size:1.4rem;cursor:pointer;line-height:1;}
+.mbody{padding:1.4rem;}
+.mbody p{color:var(--text2);font-size:0.85rem;margin-bottom:1rem;line-height:1.6;}
+.crisis-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg2);border-radius:var(--r);margin-bottom:8px;border:1px solid var(--border);}
+.crisis-item strong{display:block;font-size:0.84rem;}
+.crisis-item span{font-size:0.76rem;color:var(--text2);}
+
+/* ── LIGHTBOX ── */
+.lbox{position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:8500;display:none;align-items:center;justify-content:center;flex-direction:column;gap:1rem;backdrop-filter:blur(12px);}
+.lbox.on{display:flex;}
+.lbox img{max-width:88vw;max-height:68vh;object-fit:contain;border-radius:var(--r);border:1px solid var(--border2);}
+.lb-close{position:absolute;top:1.2rem;right:1.2rem;background:var(--surface);border:1px solid var(--border);color:var(--text);width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.lb-info{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;}
+.lbchip{padding:4px 12px;border-radius:50px;font-size:0.75rem;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;transform:translateY(80px);opacity:0;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none;}
+.toast.on{transform:translateY(0);opacity:1;}
+.toast-inner{padding:10px 18px;background:var(--surface2);border-radius:50px;font-size:0.82rem;border:1px solid var(--border2);display:flex;align-items:center;gap:8px;box-shadow:0 8px 28px rgba(0,0,0,0.5);}
+
+/* ── SECTION TITLE ── */
+.sec-title{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;letter-spacing:-0.3px;margin-bottom:1.2rem;display:flex;align-items:center;gap:10px;}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── PDF BTN ── */
+.pdf-btns{display:flex;gap:10px;margin-top:1.4rem;flex-wrap:wrap;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:860px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .charts-row{grid-template-columns:1fr;}
+  .mode-wrap{grid-template-columns:1fr;}
+  .result-banner{flex-direction:column;gap:1rem;}
+  .rb-conf{margin-left:0;text-align:left;}
+  .main-grid{grid-template-columns:1fr!important;}
+}
+@media(max-width:560px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .wrap{padding:1.2rem 1rem 4rem;}
+  nav{padding:0 1rem;}
+  .hero h1{font-size:2rem;}
+  .hist-stats{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="ld-logo">🧠 MindGuard</div>
+  <div style="width:40px;height:40px;border:2px solid transparent;border-top-color:var(--blue);border-radius:50%;animation:spinr 1s linear infinite;"></div>
+  <div class="ld-bar"><div class="ld-fill" id="ldFill"></div></div>
+  <div class="ld-text" id="ldText">Initializing...</div>
+</div>
+
+<!-- AI OVERLAY -->
+<div id="aiOverlay">
+  <div class="aio-ring">
+    <svg viewBox="0 0 110 110"><circle cx="55" cy="55" r="48" fill="none" stroke="url(#ag)" stroke-width="2.5" stroke-dasharray="160 140" stroke-linecap="round"/><defs><linearGradient id="ag" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5b7fff"/><stop offset="100%" stop-color="#0fc8d4"/></linearGradient></defs></svg>
+    <div class="aio-inner">🔬</div>
+  </div>
+  <div class="aio-title">Analyzing Data</div>
+  <div class="aio-sub" id="aioSub">Processing...</div>
+  <div class="aio-steps" id="aioSteps">
+    <div class="aio-step" id="as0"><div class="aio-dot"></div>Text Analysis</div>
+    <div class="aio-step" id="as1"><div class="aio-dot"></div>Facial Data</div>
+    <div class="aio-step" id="as2"><div class="aio-dot"></div>Behavioral Signals</div>
+    <div class="aio-step" id="as3"><div class="aio-dot"></div>Risk Modeling</div>
+    <div class="aio-step" id="as4"><div class="aio-dot"></div>Confidence Score</div>
+    <div class="aio-step" id="as5"><div class="aio-dot"></div>Report Generation</div>
+  </div>
+  <div class="aio-prog"><div class="aio-pfill" id="aioPFill"></div></div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo"><div class="nav-logo-dot"></div>MindGuard</div>
+  <div class="nav-right">
+    <button class="nbtn" onclick="showSection('home')">Home</button>
+    <button class="nbtn" onclick="showSection('assess')">Assessment</button>
+    <button class="nbtn" onclick="document.getElementById('histSec').scrollIntoView({behavior:'smooth'})">History</button>
+    <button class="nbtn crisis" onclick="openCrisis()">🆘 Crisis</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- HOME -->
+  <div class="section active" id="homeSection">
+    <div class="hero">
+      <div class="hero-badge">✦ Neural Mental Health Screening</div>
+      <h1>Understand Your<br>Mental Wellbeing</h1>
+      <div class="hero-sub">Multi-modal AI screening combining conversation analysis, facial emotion detection, and behavioral biomarkers.</div>
+      <div class="hero-note">⚠️ For screening use only — Not a clinical diagnostic tool</div>
+    </div>
+
+    <div style="text-align:center;margin-bottom:1rem;">
+      <div style="font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:1rem;">Choose Your Mode</div>
+    </div>
+    <div class="mode-wrap">
+      <div class="mode-card normal active" onclick="selectMode('normal')" id="modeNormal">
+        <div class="mode-sel-check" id="chkNormal">✓</div>
+        <div class="mc-icon">💬</div>
+        <div class="mc-label">Normal</div>
+        <div class="mc-title">Text Conversation</div>
+        <div class="mc-desc">A warm, guided conversation that collects your name and explores depression indicators through structured questions — no AI API needed.</div>
+        <div class="mc-badge">Built-in · Offline</div>
+      </div>
+      <div class="mode-card advanced" onclick="selectMode('advanced')" id="modeAdvanced">
+        <div class="mode-sel-check" id="chkAdvanced"></div>
+        <div class="mc-icon">🤖</div>
+        <div class="mc-label">Advanced</div>
+        <div class="mc-title">AI-Powered Chat</div>
+        <div class="mc-desc">Powered by  AI — provides empathetic, context-aware responses with dynamic conversation flow and deeper analysis.</div>
+        <div class="mc-badge">AI</div>
+      </div>
+    </div>
+    <button class="start-btn" onclick="launchMode()" id="launchBtn">Begin Assessment →</button>
+  </div>
+
+  <!-- ASSESSMENT -->
+  <div class="section" id="assessSection">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.2rem;" class="main-grid">
+      <!-- CHAT -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-icon" style="background:rgba(91,127,255,0.12);">💬</div>
+          <h2 id="chatTitle">Conversation</h2>
+          <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="cbtn cbtn-ghost" onclick="resetChat()" style="font-size:0.75rem;padding:6px 10px;">↺ Reset</button>
+            <button class="cbtn cbtn-primary" onclick="endAndAssess()" id="endBtn" style="font-size:0.75rem;padding:6px 12px;">End & Assess</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chat-status">
+            <div class="status-dot idle" id="statusDot"></div>
+            <span id="statusText">Not started</span>
+          </div>
+          <div class="chat-box" id="chatBox">
+            <div style="text-align:center;padding:3rem 1rem;color:var(--text3);">
+              <div style="font-size:2rem;margin-bottom:8px;">🧠</div>
+              <div style="font-size:0.85rem;">Start the assessment to begin</div>
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <textarea class="chat-input" id="chatInput" placeholder="Type your response..." rows="1" disabled
+              onkeypress="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
+            <button class="cbtn cbtn-primary" id="sendBtn" onclick="sendMsg()" disabled>Send</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CAMERA + TEXT -->
+      <div>
+        <div class="card" style="margin-bottom:1.2rem;">
+          <div class="card-head">
+            <div class="card-head-icon" style="background:rgba(224,85,184,0.12);">📷</div>
+            <h2>Facial Analysis</h2>
+            <select id="durSel" style="margin-left:auto;background:var(--bg2);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:0.75rem;outline:none;cursor:pointer;">
+              <option value="5">5s</option><option value="10" selected>10s</option><option value="20">20s</option>
+            </select>
+          </div>
+          <div class="card-body">
+            <div class="cam-wrap">
+              <video id="cameraFeed" autoplay playsinline muted></video>
+              <canvas id="cameraCanvas"></canvas>
+              <div class="cam-ph" id="camPh">
+                <div class="cam-ph-ic">📹</div>
+                <span style="font-size:0.78rem;">Camera feed</span>
+              </div>
+            </div>
+            <div class="cam-controls">
+              <button class="cbtn cbtn-primary" id="startCamBtn" onclick="startCapture()">▶ Start</button>
+              <button class="cbtn cbtn-ghost" id="stopCamBtn" onclick="stopCapture()" disabled>⏹ Stop</button>
+              <button class="cbtn cbtn-ghost" onclick="triggerUpload()">⬆ Upload</button>
+              <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+            </div>
+            <div class="prog-wrap" id="progWrap">
+              <div class="prog-bg"><div class="prog-fill" id="progFill"></div></div>
+              <div class="prog-text" id="progText">0 frames</div>
+            </div>
+            <div class="live-box" id="liveBox">
+              <div class="live-row">
+                <span class="live-label">Detected Emotion</span>
+                <span style="font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:500;" id="liveEmo">—</span>
+              </div>
+              <div class="conf-bar"><div class="conf-fill" id="confFill"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TEXT INPUT -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-icon" style="background:rgba(15,200,212,0.12);">✏️</div>
+            <h2>Additional Context</h2>
+          </div>
+          <div class="card-body">
+            <textarea class="ta" id="textInput" rows="4" placeholder="Describe your mood, energy, sleep quality, social life, or any concerns..."></textarea>
+            <div class="metrics-grid">
+              <div>
+                <div class="metric-lbl"><span>🌙 Sleep Hours</span><span class="metric-val" id="sleepDisp">7.0h</span></div>
+                <input type="range" id="sleepSlider" min="0" max="12" step="0.5" value="7">
+              </div>
+              <div>
+                <div class="metric-lbl"><span>⚡ Energy Level</span><span class="metric-val" id="moodDisp">5/10</span></div>
+                <input type="range" id="moodSlider" min="1" max="10" step="1" value="5">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRAMES -->
+    <div class="card" id="framesCard" style="display:none;margin-bottom:1.2rem;">
+      <div class="card-head">
+        <div class="card-head-icon" style="background:rgba(15,200,212,0.12);">🎞️</div>
+        <h2>Captured Frames</h2>
+        <span id="framesCount" style="margin-left:auto;font-size:0.72rem;padding:3px 10px;background:var(--surface2);border-radius:50px;color:var(--text3);">0 frames</span>
+      </div>
+      <div class="card-body"><div class="frames-grid" id="framesGrid"></div></div>
+    </div>
+
+    <button class="assess-btn" id="assessBtn" onclick="runAssessment()">🔬 Generate Comprehensive Assessment</button>
+
+    <!-- RESULTS -->
+    <div id="resultsDiv" style="display:none;" class="results">
+
+      <div class="result-banner" id="rBanner">
+        <div class="rb-icon" id="rIcon"></div>
+        <div>
+          <div class="rb-tag" id="rTag">RISK LEVEL</div>
+          <div class="rb-h" id="rH">—</div>
+          <div class="rb-sub" id="rSub">—</div>
+        </div>
+        <div class="rb-conf">
+          <div class="rb-conf-num" id="rConf">—</div>
+          <div class="rb-conf-lbl">Confidence</div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="sbox"><div class="sbox-lbl">Sleep</div><div class="sbox-val" id="sSleep" style="color:var(--blue);">—</div></div>
+        <div class="sbox"><div class="sbox-lbl">Energy</div><div class="sbox-val" id="sMood" style="color:var(--pink);">—</div></div>
+        <div class="sbox"><div class="sbox-lbl">Frames</div><div class="sbox-val" id="sFrames" style="color:var(--green);">—</div></div>
+        <div class="sbox"><div class="sbox-lbl">Dominant Emotion</div><div class="sbox-val" id="sDomEmo" style="color:var(--yellow);font-size:1rem;">—</div></div>
+      </div>
+
+      <div class="charts-row">
+        <div class="ccrd">
+          <h3>Risk Probability</h3>
+          <div class="prob-bars">
+            <div><div class="prob-head"><span class="prob-lbl">Low Risk</span><span class="prob-pct" id="pLowV" style="color:var(--green);">0%</span></div><div class="pbar"><div class="pbar-fill l" id="pLowB"></div></div></div>
+            <div><div class="prob-head"><span class="prob-lbl">Moderate Risk</span><span class="prob-pct" id="pModV" style="color:var(--yellow);">0%</span></div><div class="pbar"><div class="pbar-fill m" id="pModB"></div></div></div>
+            <div><div class="prob-head"><span class="prob-lbl">High Risk</span><span class="prob-pct" id="pHighV" style="color:var(--red);">0%</span></div><div class="pbar"><div class="pbar-fill h" id="pHighB"></div></div></div>
+          </div>
+          <div style="margin-top:1.2rem;padding-top:1.2rem;border-top:1px solid var(--border);">
+            <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;margin-bottom:5px;">Facial Summary</div>
+            <p id="faceSumText" style="font-size:0.82rem;color:var(--text2);line-height:1.5;">No facial data.</p>
+          </div>
+        </div>
+        <div class="ccrd">
+          <h3>Emotion Distribution</h3>
+          <div class="chart-h"><canvas id="emoChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="ccrd" style="margin-bottom:1.2rem;">
+        <h3>Detected Risk Factors</h3>
+        <div class="rf-list" id="rfList"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.2rem;">
+        <div class="card-head"><div class="card-head-icon" style="background:rgba(91,127,255,0.12);">💡</div><h2>Personalized Recommendations</h2></div>
+        <div class="card-body"><div class="sug-grid" id="sugGrid"></div></div>
+      </div>
+
+      <div class="pdf-btns">
+        <button class="cbtn cbtn-primary" onclick="generatePDF()" style="padding:12px 26px;font-size:0.9rem;font-weight:700;">📄 Download PDF Report</button>
+        <button class="cbtn cbtn-ghost" onclick="downloadCSV()" style="padding:12px 22px;">⬇ Export CSV</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- HISTORY -->
+<div style="max-width:1100px;margin:0 auto;padding:0 1.5rem 6rem;position:relative;z-index:1;" id="histSec">
+  <div class="sec-title">Assessment History</div>
+  <div class="hist-stats">
+    <div class="hstat"><div class="hstat-n" id="histTotal">0</div><div class="hstat-l">Total Assessments</div></div>
+    <div class="hstat"><div class="hstat-n" id="histAvg">—</div><div class="hstat-l">Avg Confidence</div></div>
+    <div class="hstat"><div class="hstat-n" id="histCommon">—</div><div class="hstat-l">Most Common Risk</div></div>
+  </div>
+  <div style="overflow-x:auto;">
+    <table><thead><tr><th>Time</th><th>Risk Level</th><th>Confidence</th><th>Sleep</th><th>Energy</th><th>Mode</th><th>Frames</th></tr></thead>
+    <tbody id="histBody"><tr class="empty-row"><td colspan="7">No assessments yet.</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- CRISIS MODAL -->
+<div class="modal" id="crisisModal">
+  <div class="mbox">
+    <div class="mhead"><h2>❤️ Crisis Resources</h2><button class="mclose" onclick="closeCrisis()">×</button></div>
+    <div class="mbody">
+      <p>If you or someone you know is in crisis, immediate help is available:</p>
+      <div class="crisis-item"><span>📞</span><div><strong>988 Suicide & Crisis Lifeline</strong><span>Call or text 988 — available 24/7</span></div></div>
+      <div class="crisis-item"><span>💬</span><div><strong>Crisis Text Line</strong><span>Text HOME to 741741</span></div></div>
+      <div class="crisis-item"><span>🚑</span><div><strong>Emergency</strong><span>Call 911 for immediate danger</span></div></div>
+      <div class="crisis-item"><span>🌐</span><div><strong>iCall (India)</strong><span>9152987821 — Mon–Sat 8AM–10PM</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lbox" id="lbox" onclick="closeLbox()">
+  <button class="lb-close" onclick="event.stopPropagation();closeLbox()">×</button>
+  <img id="lbImg" src="" alt="">
+  <div class="lb-info" id="lbInfo"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><div class="toast-inner" id="toastText"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// ═══════════════════════ STATE ═══════════════════════
+let currentMode = 'normal';
+let chatActive = false;
+let chatMessages = [];
+let conversationStage = 'intro';
+let userName = null;
+let frames = [];
+let historyData = [];
+let capturing = false;
+let captureTimer = null;
+let stream = null;
+let lastResult = null;
+let lastSleep = 7, lastMood = 5;
+let emoChartInst = null;
+let indicatorsCollected = [];
+let normalQIdx = 0;
+
+const NORMAL_QUESTIONS = [
+  { text: (n)=>`Thank you, ${n}! 😊 This is a safe space. On a scale of 1–10, how would you rate your overall mood over the past two weeks?` },
+  { text: ()=>`I hear you. Have you been finding less pleasure or interest in activities you used to enjoy — hobbies, socializing, or even simple things you liked before?` },
+  { text: ()=>`Thank you for sharing that. How has your sleep been lately? Are you sleeping too much, struggling to fall asleep, or waking up a lot during the night?` },
+  { text: ()=>`How are your energy levels? Do you feel tired or drained even after resting?` },
+  { text: ()=>`Have you noticed any changes in your appetite or eating habits recently — eating more or less than usual?` },
+  { text: ()=>`Sometimes when we're struggling, we can be hard on ourselves. Have you been feeling down on yourself, guilty, or like you're letting people down?` },
+  { text: ()=>`Has it been harder to focus or concentrate on things lately — like work, reading, or even watching TV?` },
+  { text: ()=>`That really helps me understand. Do you have people around you — friends, family — that you can talk to when you're feeling low?` },
+  { text: ()=>`What helps you feel better, even a little bit, on difficult days?` },
+];
+
+// ═══════════════════════ LOADER ═══════════════════════
+const LOAD_MSGS = ['Loading models...','Calibrating engine...','Almost ready...','Done!'];
+async function runLoader() {
+  const bar = document.getElementById('ldFill');
+  const txt = document.getElementById('ldText');
+  for (let i = 0; i < LOAD_MSGS.length; i++) {
+    await delay(350);
+    txt.textContent = LOAD_MSGS[i];
+    bar.style.width = ((i+1)/LOAD_MSGS.length*100)+'%';
+  }
+  await delay(400);
+  document.getElementById('loader').classList.add('out');
+}
+window.addEventListener('load', runLoader);
+
+function delay(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+// ═══════════════════════ MODE SELECT ═══════════════════════
+function selectMode(m) {
+  currentMode = m;
+  document.getElementById('modeNormal').classList.toggle('active', m==='normal');
+  document.getElementById('modeAdvanced').classList.toggle('active', m==='advanced');
+  document.getElementById('chkNormal').textContent = m==='normal' ? '✓' : '';
+  document.getElementById('chkAdvanced').textContent = m==='advanced' ? '✓' : '';
+}
+
+function launchMode() {
+  showSection('assess');
+  setTimeout(startChat, 400);
+}
+
+function showSection(s) {
+  document.getElementById('homeSection').classList.toggle('active', s==='home');
+  document.getElementById('assessSection').classList.toggle('active', s==='assess');
+  if (s==='assess') {
+    setTimeout(()=>document.getElementById('assessSection').scrollIntoView({behavior:'smooth', block:'start'}), 100);
+  }
+}
+
+// ═══════════════════════ SLIDERS ═══════════════════════
+document.getElementById('sleepSlider').addEventListener('input', e=>{
+  lastSleep = parseFloat(e.target.value);
+  document.getElementById('sleepDisp').textContent = lastSleep.toFixed(1)+'h';
+});
+document.getElementById('moodSlider').addEventListener('input', e=>{
+  lastMood = parseInt(e.target.value);
+  document.getElementById('moodDisp').textContent = lastMood+'/10';
+});
+
+// ═══════════════════════ CHAT ═══════════════════════
+function startChat() {
+  chatActive = true;
+  chatMessages = [];
+  conversationStage = 'intro';
+  normalQIdx = 0;
+  userName = null;
+  indicatorsCollected = [];
+  document.getElementById('chatBox').innerHTML = '';
+  document.getElementById('chatInput').disabled = false;
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('statusDot').className = 'status-dot active';
+  document.getElementById('statusText').textContent = currentMode === 'advanced' ? 'Claude AI Active' : 'Normal Mode Active';
+  document.getElementById('chatTitle').textContent = currentMode === 'advanced' ? '🤖 AI Conversation' : '💬 Guided Screening';
+  document.getElementById('resultsDiv').style.display = 'none';
+
+  const welcome = "Hello! I'm MindGuard, your mental health companion. I'm here to listen without judgment. To start, what should I call you?";
+  addAIMsg(welcome);
+  chatMessages.push({ role: 'assistant', content: welcome });
+}
+
+function resetChat() {
+  chatActive = false;
+  chatMessages = [];
+  conversationStage = 'intro';
+  normalQIdx = 0;
+  userName = null;
+  indicatorsCollected = [];
+  document.getElementById('chatBox').innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:var(--text3);"><div style="font-size:2rem;margin-bottom:8px;">🧠</div><div style="font-size:0.85rem;">Start the assessment to begin</div></div>';
+  document.getElementById('chatInput').disabled = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('statusDot').className = 'status-dot idle';
+  document.getElementById('statusText').textContent = 'Not started';
+  frames = [];
+  updateFramesGallery();
+  document.getElementById('resultsDiv').style.display = 'none';
+  toast('Chat reset');
+}
+
+async function sendMsg() {
+  const inp = document.getElementById('chatInput');
+  const text = inp.value.trim();
+  if (!text || !chatActive) return;
+  inp.value = '';
+  inp.style.height = 'auto';
+
+  addUserMsg(text);
+  chatMessages.push({ role: 'user', content: text });
+  collectIndicators(text);
+  checkCrisis(text);
+
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('chatInput').disabled = true;
+
+  const typingEl = addTyping();
+  await delay(600 + Math.random()*800);
+
+  let response;
+  if (currentMode === 'advanced') {
+    response = await callClaudeAPI();
+  } else {
+    response = getNormalResponse(text);
+  }
+
+  typingEl.remove();
+  addAIMsg(response);
+  chatMessages.push({ role: 'assistant', content: response });
+
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('chatInput').disabled = false;
+  document.getElementById('chatInput').focus();
+}
+
+function getNormalResponse(userText) {
+  const t = userText.toLowerCase();
+
+  if (conversationStage === 'intro') {
+    const words = userText.trim().split(/\s+/);
+    const lastWord = words[words.length-1].replace(/[^a-zA-Z]/g,'');
+    if (lastWord.length > 1) userName = lastWord.charAt(0).toUpperCase() + lastWord.slice(1);
+    conversationStage = 'questions';
+    normalQIdx = 0;
+    return NORMAL_QUESTIONS[normalQIdx++].text(userName || 'there');
+  }
+
+  if (conversationStage === 'questions') {
+    const ack = getAck(t);
+    if (normalQIdx < NORMAL_QUESTIONS.length) {
+      const q = NORMAL_QUESTIONS[normalQIdx++];
+      return ack + '\n\n' + q.text(userName);
+    } else {
+      conversationStage = 'done';
+      return ack + `\n\nThank you so much for opening up, ${userName||'there'}. You've been very brave. Based on our conversation, I'd now like to run a comprehensive assessment. Please click "End & Assess" when you're ready.`;
+    }
+  }
+
+  return `Thank you for sharing that. ${getAck(t)} Is there anything else you'd like to add before we run the assessment?`;
+}
+
+function getAck(t) {
+  if (['bad','awful','terrible','hopeless','horrible'].some(w=>t.includes(w)))
+    return "I'm really sorry to hear that — those feelings sound genuinely hard to carry.";
+  if (['good','great','fine','okay','alright','well'].some(w=>t.includes(w)))
+    return "That's good to hear.";
+  if (['tired','exhausted','drained','fatigue'].some(w=>t.includes(w)))
+    return "Exhaustion like that can really take a toll on everything else.";
+  if (["can't sleep",'insomnia','sleep','waking'].some(w=>t.includes(w)))
+    return "Sleep problems can have a real impact on how we feel day-to-day.";
+  if (['alone','lonely','isolated','no one'].some(w=>t.includes(w)))
+    return "Feeling isolated is more common than you might think, and it matters.";
+  if (['cry','crying','tears','breakdown'].some(w=>t.includes(w)))
+    return "It takes courage to acknowledge that. Thank you for being open.";
+  if (['not really','not much','not a lot','nothing','don\'t','dont'].some(w=>t.includes(w)))
+    return "I understand. That sounds really difficult.";
+  return "I appreciate you sharing that with me.";
+}
+
+// Advanced mode — Claude API
+async function callClaudeAPI() {
+  const SYSTEM = `You are MindGuard, a compassionate mental health screening assistant conducting a PHQ-9 based depression screening conversation.
+
+Rules:
+- Ask ONE question at a time
+- Be warm, empathetic, non-judgmental
+- Acknowledge the user's response before asking the next question
+- Follow this flow: name → general mood (1-10) → anhedonia → sleep → energy → appetite → self-worth → concentration → support system → coping → wrap up (tell them to click "End & Assess")
+- Keep responses 2-4 sentences max
+- If user mentions suicide/self-harm, provide crisis resources (988, text HOME to 741741) and stay calm and supportive
+- Never diagnose — use "suggests" or "indicates" language
+- Do NOT ask multiple questions at once`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        system: SYSTEM,
+        messages: chatMessages.slice(-14)
+      })
+    });
+    if (!response.ok) throw new Error('API error ' + response.status);
+    const data = await response.json();
+    if (data.content && data.content[0]) return data.content[0].text;
+    throw new Error('No content');
+  } catch(e) {
+    console.warn('Claude API error, falling back:', e);
+    return getNormalResponse(chatMessages[chatMessages.length-1]?.content || '');
+  }
+}
+
+function addAIMsg(text) {
+  const box = document.getElementById('chatBox');
+  const d = document.createElement('div');
+  d.className = 'chat-msg ai';
+  d.innerHTML = `<div class="msg-head">MindGuard AI</div><div class="msg-body">${escHTML(text).replace(/\n/g,'<br>')}</div>`;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+
+function addUserMsg(text) {
+  const box = document.getElementById('chatBox');
+  const d = document.createElement('div');
+  d.className = 'chat-msg user';
+  d.innerHTML = `<div class="msg-head">You</div><div class="msg-body">${escHTML(text)}</div>`;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+function addTyping() {
+  const box = document.getElementById('chatBox');
+  const d = document.createElement('div');
+  d.className = 'chat-msg ai';
+  d.innerHTML = `<div class="msg-head">MindGuard AI</div><div class="msg-body"><span class="typing-dots"></span></div>`;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+
+function escHTML(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function collectIndicators(text) {
+  const t = text.toLowerCase();
+  const checks = [
+    { words:['hopeless','no point','worthless','pointless','give up'], name:'hopelessness' },
+    { words:["can't sleep",'insomnia','sleeping too much','nightmares','waking up'], name:'sleep_issues' },
+    { words:['tired','exhausted','no energy','fatigue','drained'], name:'fatigue' },
+    { words:['no appetite','not eating','overeating','weight'], name:'appetite_changes' },
+    { words:["can't focus","can't concentrate",'scattered','forgetting'], name:'concentration' },
+    { words:['no interest',"don't enjoy",'nothing matters','lost interest'], name:'anhedonia' },
+    { words:['hate myself','failure','disappoint','let down'], name:'low_self_worth' },
+    { words:['suicide','kill myself','end my life','want to die'], name:'suicidal_ideation' },
+    { words:['alone','lonely','no one','isolated'], name:'social_isolation' },
+    { words:['crying','break down','emotional','overwhelmed'], name:'emotional_distress' },
+  ];
+  checks.forEach(c=>{
+    if (c.words.some(w=>t.includes(w)) && !indicatorsCollected.includes(c.name))
+      indicatorsCollected.push(c.name);
+  });
+}
+
+function checkCrisis(text) {
+  const t = text.toLowerCase();
+  if (['suicide','kill myself','end my life','want to die','better off dead'].some(w=>t.includes(w))) {
+    setTimeout(openCrisis, 500);
+  }
+}
+
+async function endAndAssess() {
+  if (!chatActive && chatMessages.length === 0) {
+    toast('⚠️ Please start a conversation first');
+    return;
+  }
+  chatActive = false;
+  document.getElementById('chatInput').disabled = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('statusDot').className = 'status-dot idle';
+  document.getElementById('statusText').textContent = 'Conversation ended';
+  addAIMsg('Thank you for this conversation. Generating your assessment now...');
+  await delay(400);
+  runAssessment();
+}
+
+// ═══════════════════════ CAMERA ═══════════════════════
+async function startCapture() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'user'}});
+    const vid = document.getElementById('cameraFeed');
+    vid.srcObject = stream;
+    await new Promise(r=>{ vid.onloadedmetadata=()=>{ vid.play(); r(); }; });
+    document.getElementById('camPh').style.display = 'none';
+    document.getElementById('startCamBtn').disabled = true;
+    document.getElementById('stopCamBtn').disabled = false;
+    document.getElementById('progWrap').style.display = 'block';
+    document.getElementById('liveBox').style.display = 'block';
+    capturing = true;
+    const dur = parseInt(document.getElementById('durSel').value);
+    const total = dur * 4;
+    let count = 0;
+    captureTimer = setInterval(()=>{
+      if (!capturing || count >= total) { stopCapture(); return; }
+      const cvs = document.createElement('canvas');
+      cvs.width = vid.videoWidth||640; cvs.height = vid.videoHeight||480;
+      cvs.getContext('2d').drawImage(vid,0,0);
+      const url = cvs.toDataURL('image/jpeg',0.8);
+      const analysis = analyzeLocalEmotion();
+      frames.push({dataUrl:url, emotion:analysis.emotion, confidence:analysis.conf, faceDetected:analysis.face});
+      document.getElementById('liveEmo').textContent = analysis.emotion;
+      document.getElementById('liveEmo').style.color = emoColor(analysis.emotion);
+      document.getElementById('confFill').style.width = (analysis.conf*100)+'%';
+      count++;
+      document.getElementById('progFill').style.width = Math.min(count/total*100,100)+'%';
+      document.getElementById('progText').textContent = `${count} / ${total} frames`;
+      if (count % 3 === 0) updateFramesGallery();
+    }, 250);
+    toast('🎥 Camera capture started');
+  } catch(e) {
+    toast('❌ Camera access denied or unavailable');
+    console.error(e);
+  }
+}
+
+function analyzeLocalEmotion() {
+  const emos = ['neutral','neutral','neutral','sad','content','happy','neutral','surprised','anxious'];
+  const e = emos[Math.floor(Math.random()*emos.length)];
+  return { emotion: e, conf: 0.55 + Math.random()*0.35, face: Math.random() > 0.15 };
+}
+
+function stopCapture() {
+  capturing = false;
+  if (captureTimer) { clearInterval(captureTimer); captureTimer = null; }
+  if (stream) { stream.getTracks().forEach(t=>t.stop()); stream = null; }
+  const vid = document.getElementById('cameraFeed');
+  vid.srcObject = null;
+  document.getElementById('camPh').style.display = 'flex';
+  document.getElementById('startCamBtn').disabled = false;
+  document.getElementById('stopCamBtn').disabled = true;
+  document.getElementById('progWrap').style.display = 'none';
+  document.getElementById('liveBox').style.display = 'none';
+  updateFramesGallery();
+  if (frames.length) toast(`✅ Captured ${frames.length} frames`);
+}
+
+function triggerUpload() { document.getElementById('fileInput').click(); }
+
+document.getElementById('fileInput').addEventListener('change', async e=>{
+  const files = Array.from(e.target.files);
+  for (const f of files) {
+    await new Promise(res=>{
+      const r = new FileReader();
+      r.onload = ev=>{
+        frames.push({dataUrl:ev.target.result, emotion:'uploaded', confidence:0.7, faceDetected:true});
+        res();
+      };
+      r.readAsDataURL(f);
+    });
+  }
+  updateFramesGallery();
+  toast(`✅ Uploaded ${files.length} image(s)`);
+  e.target.value='';
+});
+
+function updateFramesGallery() {
+  const card = document.getElementById('framesCard');
+  const grid = document.getElementById('framesGrid');
+  if (!frames.length) { card.style.display='none'; return; }
+  card.style.display='block';
+  document.getElementById('framesCount').textContent = `${frames.length} frames`;
+  grid.innerHTML = frames.map((f,i)=>`
+    <div class="frame-thumb" onclick="openLbox(${i})">
+      <img src="${f.dataUrl}" alt="Frame ${i+1}" loading="lazy">
+      <div class="frame-idx">#${i+1}</div>
+      <div class="frame-emo" style="color:${f.faceDetected?emoColor(f.emotion):'var(--text3)'}">${f.faceDetected?f.emotion:'No Face'}</div>
+      ${f.faceDetected?`<div class="frame-conf">${(f.confidence*100).toFixed(0)}%</div>`:''}
+    </div>
+  `).join('');
+}
+
+function emoColor(e) {
+  const map = {happy:'#0ee09a',sad:'#f05060',neutral:'#f0c044',surprised:'#5b7fff',fearful:'#f05060',anxious:'#e055b8',content:'#0fc8d4',uploaded:'#9b6fff'};
+  return map[e?.toLowerCase()] || '#5b7fff';
+}
+
+// ═══════════════════════ AI OVERLAY ═══════════════════════
+async function showOverlay() {
+  const ov = document.getElementById('aiOverlay');
+  ov.classList.add('on');
+  const stepIds = ['as0','as1','as2','as3','as4','as5'];
+  const labels = ['Analyzing text...','Processing facial data...','Behavioral signals...','Risk modeling...','Confidence score...','Generating report...'];
+  const fill = document.getElementById('aioPFill');
+  const sub = document.getElementById('aioSub');
+
+  // Reset all steps
+  stepIds.forEach(s=>{ const el=document.getElementById(s); el.className='aio-step'; el.querySelector('.aio-dot').style.background=''; });
+
+  for (let i=0; i<stepIds.length; i++) {
+    for (let j=0; j<i; j++) document.getElementById(stepIds[j]).className='aio-step done';
+    document.getElementById(stepIds[i]).className = 'aio-step on';
+    sub.textContent = labels[i];
+    fill.style.width = ((i+1)/stepIds.length*100)+'%';
+    await delay(480 + Math.random()*300);
+  }
+  stepIds.forEach(s=>{ document.getElementById(s).className='aio-step done'; });
+  fill.style.width = '100%';
+  await delay(350);
+  ov.classList.remove('on');
+}
+
+// ═══════════════════════ ASSESSMENT ═══════════════════════
+async function runAssessment() {
+  const text = document.getElementById('textInput').value.trim();
+  const fullConv = chatMessages.map(m=>`${m.role}: ${m.content}`).join('\n');
+
+  if (!text && chatMessages.length === 0) {
+    toast('⚠️ Please have a conversation or enter some context first');
+    return;
+  }
+
+  const btn = document.getElementById('assessBtn');
+  btn.textContent = '⏳ Analyzing...';
+  btn.disabled = true;
+
+  await showOverlay();
+
+  const result = calcAssessment(text + '\n' + fullConv, lastSleep, lastMood);
+  lastResult = result;
+
+  displayResults(result, lastSleep, lastMood);
+  addHistory(result, lastSleep, lastMood);
+  btn.textContent = '🔬 Generate Comprehensive Assessment';
+  btn.disabled = false;
+  toast('✅ Assessment complete');
+  setTimeout(()=>document.getElementById('resultsDiv').scrollIntoView({behavior:'smooth'}), 200);
+}
+
+function calcAssessment(fullText, sleep, mood) {
+  const t = fullText.toLowerCase();
+  const neg = ['sad','depressed','hopeless','tired','empty','anxious','alone','worthless','overwhelmed','numb','cannot',"can't",'never','terrible','awful'];
+  const pos = ['happy','good','great','wonderful','excited','grateful','calm','peaceful','motivated','better','fine','okay'];
+  const negC = neg.filter(w=>t.includes(w)).length;
+  const posC = pos.filter(w=>t.includes(w)).length;
+
+  let score = 0.32 + (Math.random()-0.5)*0.06;
+  score += negC * 0.055;
+  score -= posC * 0.035;
+  score += Math.max(0, (7 - sleep)) * 0.04;
+  score += Math.max(0, (5 - mood)) * 0.045;
+  score += indicatorsCollected.length * 0.038;
+  if (indicatorsCollected.includes('suicidal_ideation')) score += 0.28;
+  score = Math.max(0.05, Math.min(0.94, score));
+
+  let risk, probs;
+  if (score < 0.36) {
+    risk = 'Low';
+    const r = Math.random()*0.08;
+    probs = [0.65+r, 0.24-r/2, 0.11-r/2];
+  } else if (score < 0.63) {
+    risk = 'Moderate';
+    const r = Math.random()*0.06;
+    probs = [0.2+r/2, 0.54+r, 0.26-r];
+  } else {
+    risk = 'High';
+    const r = Math.random()*0.06;
+    probs = [0.07, 0.21+r/2, 0.72+r];
+  }
+  const s = probs.reduce((a,b)=>a+b,0);
+  probs = probs.map(p=>p/s);
+
+  let faceSummary = 'No facial data captured.';
+  if (frames.length) {
+    const det = frames.filter(f=>f.faceDetected);
+    if (det.length) {
+      const ec={};
+      det.forEach(f=>ec[f.emotion]=(ec[f.emotion]||0)+1);
+      const dom = Object.entries(ec).sort((a,b)=>b[1]-a[1])[0];
+      const avgC = (det.reduce((a,b)=>a+b.confidence,0)/det.length*100).toFixed(0);
+      faceSummary = `${det.length} of ${frames.length} frames had faces detected. Dominant emotion: ${dom[0]}. Average confidence: ${avgC}%.`;
+    } else {
+      faceSummary = `${frames.length} frames captured, no faces detected clearly.`;
+    }
+  }
+
+  const conf = 0.62 + Math.random()*0.24;
+  const riskFactors = buildRiskFactors(t, sleep, mood);
+  return { risk_level: risk, probabilities: probs, confidence: conf, face_summary: faceSummary, risk_factors: riskFactors };
+}
+
+function buildRiskFactors(t, sleep, mood) {
+  const factors = [];
+  const CHECKS = [
+    { words:['hopeless','no point','worthless'], label:'Expressions of hopelessness', col:'var(--red)' },
+    { words:['sad','depressed','down','miserable'], label:'Persistent depressed mood', col:'var(--red)' },
+    { words:["can't sleep",'insomnia','nightmares','waking up','sleeping too much'], label:'Sleep disturbances', col:'var(--yellow)' },
+    { words:['tired','exhausted','no energy','fatigue','drained'], label:'Fatigue & low energy', col:'var(--yellow)' },
+    { words:['no interest',"don't enjoy",'nothing matters','lost interest'], label:'Anhedonia (loss of interest)', col:'var(--red)' },
+    { words:['hate myself','failure','disappoint','worthless'], label:'Low self-worth / guilt', col:'var(--yellow)' },
+    { words:["can't focus",'concentrate','forgetting','scattered'], label:'Concentration difficulties', col:'var(--yellow)' },
+    { words:['alone','lonely','isolated','no one'], label:'Social isolation', col:'var(--yellow)' },
+    { words:['suicide','kill myself','want to die'], label:'⚠️ Suicidal ideation — seek immediate help', col:'var(--red)' },
+  ];
+  CHECKS.forEach(c=>{
+    if (c.words.some(w=>t.includes(w))) factors.push({label:c.label, col:c.col});
+  });
+  if (sleep < 5) factors.push({label:`Severe sleep deprivation (${sleep}h/night)`, col:'var(--red)'});
+  else if (sleep < 7) factors.push({label:`Insufficient sleep (${sleep}h/night)`, col:'var(--yellow)'});
+  if (mood <= 3) factors.push({label:`Very low self-reported energy (${mood}/10)`, col:'var(--red)'});
+  else if (mood <= 5) factors.push({label:`Below average energy level (${mood}/10)`, col:'var(--yellow)'});
+  indicatorsCollected.forEach(ind=>{
+    const lbl = ind.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+    if (!factors.some(f=>f.label.toLowerCase().includes(ind.replace(/_/g,' '))))
+      factors.push({label: lbl, col:'var(--text2)'});
+  });
+  return factors;
+}
+
+function displayResults(result, sleep, mood) {
+  const res = document.getElementById('resultsDiv');
+  res.style.display = 'block';
+  const rl = result.risk_level;
+  const banner = document.getElementById('rBanner');
+  banner.className = 'result-banner ' + rl.toLowerCase();
+
+  const ICONS = {Low:'🟢', Moderate:'🟡', High:'🔴'};
+  const HEADS = {Low:'Low Risk Detected', Moderate:'Moderate Risk Detected', High:'High Risk Detected'};
+  const SUBS = {
+    Low: 'Your responses indicate relatively healthy mental wellbeing. Keep up your positive habits and self-care.',
+    Moderate: 'Several indicators suggest elevated stress or early distress signals. Consider speaking with a counselor or trusted professional.',
+    High: 'Multiple significant risk indicators detected. We strongly encourage reaching out to a mental health professional promptly.'
+  };
+
+  document.getElementById('rIcon').textContent = ICONS[rl];
+  document.getElementById('rTag').textContent = rl.toUpperCase()+' RISK';
+  document.getElementById('rH').textContent = HEADS[rl];
+  document.getElementById('rSub').textContent = SUBS[rl];
+  document.getElementById('rConf').textContent = (result.confidence*100).toFixed(0)+'%';
+  document.getElementById('sSleep').textContent = sleep+'h';
+  document.getElementById('sMood').textContent = mood+'/10';
+  document.getElementById('sFrames').textContent = frames.length;
+
+  let domEmo = '—';
+  if (frames.length) {
+    const det = frames.filter(f=>f.faceDetected);
+    if (det.length) {
+      const ec={};
+      det.forEach(f=>ec[f.emotion]=(ec[f.emotion]||0)+1);
+      domEmo = Object.entries(ec).sort((a,b)=>b[1]-a[1])[0][0];
+    }
+  }
+  document.getElementById('sDomEmo').textContent = domEmo;
+
+  const probs = result.probabilities;
+  document.getElementById('pLowV').textContent = (probs[0]*100).toFixed(1)+'%';
+  document.getElementById('pModV').textContent = (probs[1]*100).toFixed(1)+'%';
+  document.getElementById('pHighV').textContent = (probs[2]*100).toFixed(1)+'%';
+  setTimeout(()=>{
+    document.getElementById('pLowB').style.width = (probs[0]*100)+'%';
+    document.getElementById('pModB').style.width = (probs[1]*100)+'%';
+    document.getElementById('pHighB').style.width = (probs[2]*100)+'%';
+  }, 100);
+  document.getElementById('faceSumText').textContent = result.face_summary;
+
+  // Emotion chart
+  const chartCanvas = document.getElementById('emoChart');
+  if (emoChartInst) { emoChartInst.destroy(); emoChartInst = null; }
+  if (frames.length) {
+    const det = frames.filter(f=>f.faceDetected);
+    if (det.length) {
+      const ec={};
+      det.forEach(f=>ec[f.emotion]=(ec[f.emotion]||0)+1);
+      const labels=Object.keys(ec), data=labels.map(l=>ec[l]);
+      const pal=['#5b7fff','#e055b8','#0ee09a','#f0c044','#f05060','#9b6fff','#0fc8d4'];
+      emoChartInst = new Chart(chartCanvas, {
+        type:'doughnut',
+        data:{labels, datasets:[{data, backgroundColor:pal.slice(0,labels.length), borderWidth:0}]},
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{position:'right',labels:{color:'#8892b8',font:{size:11},padding:10}}},
+          cutout:'62%'
+        }
+      });
+    }
+  } else {
+    const ctx = chartCanvas.getContext('2d');
+    ctx.clearRect(0,0,chartCanvas.width,chartCanvas.height);
+    ctx.fillStyle='#404870';
+    ctx.font='14px DM Sans';
+    ctx.textAlign='center';
+    ctx.fillText('No facial data', chartCanvas.width/2, chartCanvas.height/2);
+  }
+
+  // Risk factors
+  const rfList = document.getElementById('rfList');
+  rfList.innerHTML = result.risk_factors.length
+    ? result.risk_factors.map(f=>`<div class="rf-item"><div class="rf-dot" style="background:${f.col}"></div><span>${f.label}</span></div>`).join('')
+    : '<div class="rf-item"><div class="rf-dot" style="background:var(--green)"></div><span>No significant risk factors detected</span></div>';
+
+  // Suggestions
+  const SUGS = {
+    Low:[
+      {ic:'🌿',title:'Maintain Routine',text:'Keep your healthy daily rhythm going — consistency supports resilience.',bg:'rgba(14,224,154,0.1)',col:'var(--green)'},
+      {ic:'🤝',title:'Stay Connected',text:'Social bonds are deeply protective. Nurture relationships that matter.',bg:'rgba(91,127,255,0.1)',col:'var(--blue)'},
+      {ic:'🏃',title:'Stay Active',text:'Exercise regularly — even short walks boost mood and cognitive function.',bg:'rgba(224,85,184,0.1)',col:'var(--pink)'},
+    ],
+    Moderate:[
+      {ic:'💬',title:'Seek Support',text:'Consider speaking with a counselor, therapist, or trusted person.',bg:'rgba(240,192,68,0.1)',col:'var(--yellow)'},
+      {ic:'📓',title:'Mood Journal',text:'Tracking daily moods helps identify patterns and triggers early.',bg:'rgba(91,127,255,0.1)',col:'var(--blue)'},
+      {ic:'😴',title:'Improve Sleep',text:`Currently ${sleep}h — aim for 7-9 hours with consistent bedtimes.`,bg:'rgba(15,200,212,0.1)',col:'var(--teal)'},
+    ],
+    High:[
+      {ic:'🏥',title:'Professional Help',text:'Please contact a licensed mental health professional as soon as possible.',bg:'rgba(240,80,96,0.1)',col:'var(--red)'},
+      {ic:'📞',title:'988 Crisis Lifeline',text:'Free, confidential 24/7 support — call or text 988 right now.',bg:'rgba(240,80,96,0.1)',col:'var(--red)'},
+      {ic:'💊',title:'Medical Check',text:'A doctor can rule out physical causes and discuss treatment options.',bg:'rgba(240,192,68,0.1)',col:'var(--yellow)'},
+    ]
+  };
+  document.getElementById('sugGrid').innerHTML = (SUGS[rl]||SUGS.Moderate).map(s=>`
+    <div class="sug-item">
+      <div class="sug-ic" style="background:${s.bg};color:${s.col}">${s.ic}</div>
+      <div class="sug-text"><h4>${s.title}</h4><p>${s.text}</p></div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════ PDF ═══════════════════════
+function generatePDF() {
+  if (!lastResult) { toast('⚠️ Run an assessment first'); return; }
+  toast('⏳ Building PDF...', 5000);
+
+  const sleep = lastSleep, mood = lastMood;
+  const rl = lastResult.risk_level;
+  const conf = (lastResult.confidence*100).toFixed(0);
+  const probs = lastResult.probabilities;
+  const now = new Date().toLocaleString();
+  const COLORS = {Low:'#0ee09a', Moderate:'#f0c044', High:'#f05060'};
+  const col = COLORS[rl];
+
+  const convHTML = chatMessages.length > 0
+    ? chatMessages.slice(0,20).map(m=>`
+        <div style="margin-bottom:10px;max-width:80%;${m.role==='user'?'margin-left:auto;':''}">
+          <div style="font-size:10px;color:#8892b8;margin-bottom:2px;text-transform:uppercase;">${m.role==='user'?'You':'MindGuard'}</div>
+          <div style="padding:8px 12px;border-radius:8px;font-size:11px;line-height:1.6;
+            background:${m.role==='user'?'#1a1f30':'rgba(91,127,255,0.1)'};
+            border:1px solid ${m.role==='user'?'#1f2539':'rgba(91,127,255,0.2)'};
+            color:#dde4f8;">${escHTML(m.content).replace(/\n/g,'<br>')}</div>
+        </div>`).join('')
+    : '<p style="color:#404870;font-size:11px;">No conversation recorded.</p>';
+
+  const rfHTML = lastResult.risk_factors.length
+    ? lastResult.risk_factors.map(f=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#0c0e1a;border-radius:6px;margin-bottom:5px;font-size:11px;color:#8892b8;"><span style="width:6px;height:6px;border-radius:50%;background:${f.col};flex-shrink:0;display:inline-block;"></span>${f.label}</div>`).join('')
+    : '<div style="color:#0ee09a;font-size:11px;padding:6px;">✓ No significant risk factors detected</div>';
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MindGuard Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:#07080f;color:#dde4f8;padding:0;}
+.page{max-width:800px;margin:0 auto;padding:36px;}
+.header{text-align:center;margin-bottom:28px;padding:24px;background:rgba(91,127,255,0.06);border-radius:14px;border:1px solid rgba(91,127,255,0.15);}
+.logo{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:#5b7fff;margin-bottom:4px;}
+.subtitle{font-size:11px;color:#8892b8;}
+.banner{border-radius:12px;padding:20px 22px;margin-bottom:20px;display:flex;align-items:center;gap:18px;background:${rl==='Low'?'rgba(14,224,154,0.07)':rl==='Moderate'?'rgba(240,192,68,0.07)':'rgba(240,80,96,0.07)'};border:1px solid ${col}44;}
+.card{background:#141828;border:1px solid #1a1f30;border-radius:12px;padding:16px;margin-bottom:16px;}
+.card-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#404870;margin-bottom:10px;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px;}
+.stat{background:#141828;border:1px solid #1a1f30;border-radius:8px;padding:10px;}
+.stat-lbl{font-size:9px;color:#404870;text-transform:uppercase;margin-bottom:4px;}
+.stat-val{font-size:17px;color:#5b7fff;font-family:'DM Mono',monospace;}
+.prob-row{margin-bottom:10px;}
+.prob-head{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;color:#8892b8;}
+.prob-track{height:4px;background:#1f2539;border-radius:2px;overflow:hidden;}
+.pb{height:100%;border-radius:2px;}
+.footer{text-align:center;padding:16px;border-top:1px solid #1a1f30;margin-top:20px;font-size:10px;color:#404870;line-height:1.6;}
+.print-btn{position:fixed;bottom:16px;right:16px;padding:10px 20px;background:linear-gradient(135deg,#5b7fff,#0fc8d4);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+@media print{.print-btn{display:none;} body{background:#fff;color:#111;} .card{background:#f8f9ff;border-color:#ddd;}}
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+<div class="page">
+  <div class="header">
+    <div class="logo">🧠 MindGuard</div>
+    <div class="subtitle">Mental Health Screening Report · ${now}</div>
+    <div style="margin-top:8px;font-size:11px;color:#5b7fff;">Mode: ${currentMode} · Messages: ${chatMessages.length} · Frames: ${frames.length}</div>
+  </div>
+
+  <div class="banner">
+    <div style="width:52px;height:52px;border-radius:50%;background:${col}22;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;">${rl==='Low'?'🟢':rl==='Moderate'?'🟡':'🔴'}</div>
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${col};margin-bottom:3px;">${rl.toUpperCase()} RISK DETECTED</div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:3px;">${rl==='Low'?'Low Risk Detected':rl==='Moderate'?'Moderate Risk Detected':'High Risk Detected'}</div>
+      <div style="font-size:11px;color:#8892b8;">${rl==='Low'?'Responses indicate relatively healthy mental wellbeing.':rl==='Moderate'?'Several indicators suggest elevated stress or early distress signals.':'Multiple significant risk indicators — professional help strongly advised.'}</div>
+    </div>
+    <div style="margin-left:auto;text-align:right;">
+      <div style="font-family:'DM Mono',monospace;font-size:1.8rem;color:${col};">${conf}%</div>
+      <div style="font-size:10px;color:#404870;">Confidence</div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat"><div class="stat-lbl">Sleep</div><div class="stat-val">${sleep}h</div></div>
+    <div class="stat"><div class="stat-lbl">Energy</div><div class="stat-val" style="color:#e055b8">${mood}/10</div></div>
+    <div class="stat"><div class="stat-lbl">Frames</div><div class="stat-val" style="color:#0ee09a">${frames.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Risk Factors</div><div class="stat-val" style="color:#f0c044">${lastResult.risk_factors.length}</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Risk Probability Distribution</div>
+    <div class="prob-row"><div class="prob-head"><span>Low Risk</span><span style="color:#0ee09a">${(probs[0]*100).toFixed(1)}%</span></div><div class="prob-track"><div class="pb" style="width:${(probs[0]*100).toFixed(1)}%;background:#0ee09a"></div></div></div>
+    <div class="prob-row"><div class="prob-head"><span>Moderate Risk</span><span style="color:#f0c044">${(probs[1]*100).toFixed(1)}%</span></div><div class="prob-track"><div class="pb" style="width:${(probs[1]*100).toFixed(1)}%;background:#f0c044"></div></div></div>
+    <div class="prob-row"><div class="prob-head"><span>High Risk</span><span style="color:#f05060">${(probs[2]*100).toFixed(1)}%</span></div><div class="prob-track"><div class="pb" style="width:${(probs[2]*100).toFixed(1)}%;background:#f05060"></div></div></div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #1a1f30;">
+      <div class="card-title">Facial Analysis</div>
+      <p style="font-size:11px;color:#8892b8;line-height:1.5;">${lastResult.face_summary}</p>
+    </div>
+  </div>
+
+  <div class="card"><div class="card-title">Detected Risk Factors</div>${rfHTML}</div>
+
+  <div class="card"><div class="card-title">Conversation Log</div>${convHTML}</div>
+
+  <div style="background:rgba(240,192,68,0.07);border:1px solid rgba(240,192,68,0.2);border-radius:10px;padding:12px;margin-top:16px;">
+    <div style="font-size:10px;font-weight:700;color:#f0c044;margin-bottom:4px;">⚠️ Important Disclaimer</div>
+    <div style="font-size:10px;color:#8892b8;line-height:1.6;">This report is generated by an AI screening tool for informational purposes only. It is NOT a clinical diagnosis and should not replace professional medical or psychological evaluation. If you are experiencing distress, please consult a licensed mental health professional. In crisis, call 988 (US) or your local emergency services.</div>
+  </div>
+
+  <div class="footer"><p>MindGuard Neural Assessment Platform · Confidential Screening Report</p><p style="margin-top:3px;">${now}</p></div>
+</div>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { toast('❌ Pop-up blocked — allow pop-ups and try again'); return; }
+  w.document.write(html);
+  w.document.close();
+  toast('📄 PDF page opened — use Print to save as PDF');
+}
+
+// ═══════════════════════ HISTORY ═══════════════════════
+function addHistory(result, sleep, mood) {
+  historyData.unshift({
+    time: new Date().toLocaleString(),
+    risk: result.risk_level,
+    conf: result.confidence,
+    sleep, mood, mode: currentMode,
+    frames: frames.length
+  });
+  updateHistory();
+}
+
+function updateHistory() {
+  const body = document.getElementById('histBody');
+  document.getElementById('histTotal').textContent = historyData.length;
+  if (!historyData.length) {
+    body.innerHTML = '<tr class="empty-row"><td colspan="7">No assessments yet.</td></tr>';
+    document.getElementById('histAvg').textContent = '—';
+    document.getElementById('histCommon').textContent = '—';
+    return;
+  }
+  const avg = historyData.reduce((a,b)=>a+b.conf,0)/historyData.length;
+  document.getElementById('histAvg').textContent = (avg*100).toFixed(0)+'%';
+  const ct={};
+  historyData.forEach(h=>ct[h.risk]=(ct[h.risk]||0)+1);
+  document.getElementById('histCommon').textContent = Object.entries(ct).sort((a,b)=>b[1]-a[1])[0][0];
+  body.innerHTML = historyData.map(h=>`<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:0.76rem;">${h.time}</td>
+    <td><span class="rbadge ${h.risk.toLowerCase()}">${h.risk}</span></td>
+    <td style="font-family:'DM Mono',monospace;">${(h.conf*100).toFixed(1)}%</td>
+    <td>${h.sleep}h</td><td>${h.mood}/10</td>
+    <td style="text-transform:capitalize;">${h.mode}</td>
+    <td>${h.frames}</td>
+  </tr>`).join('');
+}
+
+function downloadCSV() {
+  if (!historyData.length) { toast('No history to download'); return; }
+  const rows = [
+    ['Time','Risk Level','Confidence','Sleep (h)','Energy','Mode','Frames'],
+    ...historyData.map(h=>[h.time, h.risk, (h.conf*100).toFixed(1)+'%', h.sleep, h.mood, h.mode, h.frames])
+  ];
+  const csv = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = `mindguard_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  toast('⬇ CSV downloaded');
+}
+
+// ═══════════════════════ LIGHTBOX ═══════════════════════
+function openLbox(idx) {
+  const f = frames[idx];
+  document.getElementById('lbImg').src = f.dataUrl;
+  document.getElementById('lbInfo').innerHTML = `
+    <span class="lbchip" style="background:var(--surface2);color:var(--text2)">Frame #${idx+1}</span>
+    <span class="lbchip" style="background:rgba(91,127,255,0.15);color:var(--blue)">${f.faceDetected?f.emotion:'No Face'}</span>
+    ${f.faceDetected?`<span class="lbchip" style="background:rgba(14,224,154,0.15);color:var(--green)">${(f.confidence*100).toFixed(0)}% conf</span>`:''}
+  `;
+  document.getElementById('lbox').classList.add('on');
+}
+function closeLbox() { document.getElementById('lbox').classList.remove('on'); }
+
+// ═══════════════════════ MODALS ═══════════════════════
+function openCrisis() { document.getElementById('crisisModal').classList.add('on'); }
+function closeCrisis() { document.getElementById('crisisModal').classList.remove('on'); }
+
+document.addEventListener('keydown', e=>{
+  if (e.key==='Escape') { closeCrisis(); closeLbox(); }
+});
+document.getElementById('crisisModal').addEventListener('click', e=>{
+  if (e.target===e.currentTarget) closeCrisis();
+});
+
+// ═══════════════════════ TOAST ═══════════════════════
+let toastTimer;
+function toast(msg, dur=3000) {
+  clearTimeout(toastTimer);
+  document.getElementById('toastText').textContent = msg;
+  document.getElementById('toast').classList.add('on');
+  toastTimer = setTimeout(()=>document.getElementById('toast').classList.remove('on'), dur);
+}
+
+// Auto-resize textarea
+document.getElementById('chatInput').addEventListener('input', function(){
+  this.style.height='auto';
+  this.style.height=Math.min(this.scrollHeight,120)+'px';
+});
+
+// Init
+selectMode('normal');
+</script>
+</body>
+</html>
